@@ -269,6 +269,7 @@ declare
   v_category_distribution jsonb;
   v_daily_notices_30d jsonb;
   v_daily_registrations_30d jsonb;
+  v_reported_notices bigint;
   threshold_date timestamptz;
 begin
   select public.is_admin() into caller_is_admin;
@@ -350,6 +351,19 @@ begin
     group by 1
   ) u on d.day = u.day;
 
+  -- Reported notices count (if notice_reports table exists)
+  if exists (
+    select from pg_tables where schemaname = 'public' and tablename = 'notice_reports'
+  ) then
+    begin
+      execute 'select count(distinct notice_id) from public.notice_reports where status = ''pending''' into v_reported_notices;
+    exception when others then
+      v_reported_notices := 0;
+    end;
+  else
+    v_reported_notices := 0;
+  end if;
+
   return jsonb_build_object(
     'today_visitors', v_today_visitors,
     'today_views', v_today_views,
@@ -358,6 +372,7 @@ begin
     'total_notices', coalesce(v_total_notices, 0),
     'published_notices', coalesce(v_published_notices, 0),
     'inactive_notices', coalesce(v_inactive_notices, 0),
+    'reported_notices', coalesce(v_reported_notices, 0),
     'total_categories', coalesce(v_total_categories, 0),
     'category_distribution', coalesce(v_category_distribution, '{}'::jsonb),
     'daily_notices_30d', coalesce(v_daily_notices_30d, '[]'::jsonb),
@@ -730,37 +745,51 @@ begin
     or p.display_name ilike ('%' || p_search || '%')
   );
 
-  select jsonb_agg(
-    jsonb_build_object(
-      'id', u.id,
-      'email', u.email,
-      'display_name', coalesce(p.display_name, split_part(u.email, '@', 1)),
-      'created_at', u.created_at,
-      'last_sign_in_at', u.last_sign_in_at,
-      'is_confirmed', (u.email_confirmed_at is not null),
-      'notices_count', coalesce(nc.cnt, 0),
-      'published_notices_count', coalesce(nc.pub_cnt, 0)
-    )
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'id', q.id,
+        'email', q.email,
+        'display_name', q.display_name,
+        'created_at', q.created_at,
+        'last_sign_in_at', q.last_sign_in_at,
+        'is_confirmed', q.is_confirmed,
+        'notices_count', q.notices_count,
+        'published_notices_count', q.published_notices_count
+      )
+    ),
+    '[]'::jsonb
   ) into users_data
-  from auth.users u
-  left join public.profiles p on u.id = p.id
-  left join (
+  from (
     select
-      owner_id,
-      count(*) as cnt,
-      count(*) filter (where status = 'published') as pub_cnt
-    from public.notices
-    group by owner_id
-  ) nc on u.id = nc.owner_id
-  where (
-    p_search is null 
-    or p_search = ''
-    or u.email ilike ('%' || p_search || '%')
-    or p.display_name ilike ('%' || p_search || '%')
-  )
-  order by u.created_at desc
-  offset p_offset
-  limit p_limit;
+      u.id,
+      u.email,
+      coalesce(p.display_name, split_part(u.email, '@', 1)) as display_name,
+      u.created_at,
+      u.last_sign_in_at,
+      (u.email_confirmed_at is not null) as is_confirmed,
+      coalesce(nc.cnt, 0) as notices_count,
+      coalesce(nc.pub_cnt, 0) as published_notices_count
+    from auth.users u
+    left join public.profiles p on u.id = p.id
+    left join (
+      select
+        owner_id,
+        count(*) as cnt,
+        count(*) filter (where status = 'published') as pub_cnt
+      from public.notices
+      group by owner_id
+    ) nc on u.id = nc.owner_id
+    where (
+      p_search is null 
+      or p_search = ''
+      or u.email ilike ('%' || p_search || '%')
+      or p.display_name ilike ('%' || p_search || '%')
+    )
+    order by u.created_at desc
+    offset p_offset
+    limit p_limit
+  ) q;
 
   return jsonb_build_object(
     'total', coalesce(total_count, 0),
@@ -773,6 +802,18 @@ $$;
 
 revoke execute on function public.get_author_users_directory(text, integer, integer) from public, anon;
 grant execute on function public.get_author_users_directory(text, integer, integer) to authenticated;
+
+-- 13. Notice Reports access for authenticated admins (if notice_reports table exists)
+do $$
+begin
+  if exists (
+    select from pg_tables where schemaname = 'public' and tablename = 'notice_reports'
+  ) then
+    execute 'grant select, update, delete on public.notice_reports to authenticated';
+    execute 'drop policy if exists "Admins can view and manage notice reports" on public.notice_reports';
+    execute 'create policy "Admins can view and manage notice reports" on public.notice_reports for all to authenticated using (public.is_admin()) with check (public.is_admin())';
+  end if;
+end $$;
 
 -- Refresh PostgREST schema cache immediately
 notify pgrst, 'reload schema';

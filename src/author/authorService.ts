@@ -49,12 +49,13 @@ export class AuthorService {
   }
 
   /**
-   * Fetch notices with server-side pagination, category, and status filters
+   * Fetch notices with server-side pagination, category, status, and reports
    */
   static async getNotices(params: {
     search?: string;
     category?: string;
     status?: string;
+    reportedOnly?: boolean;
     page: number;
     limit: number;
   }): Promise<{ notices: AuthorNotice[]; total: number }> {
@@ -62,15 +63,36 @@ export class AuthorService {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
+    let reportedNoticeIds: string[] | null = null;
+    if (status === 'reported') {
+      try {
+        const { data: repData } = await supabase
+          .from('notice_reports')
+          .select('notice_id');
+        reportedNoticeIds = Array.from(new Set((repData || []).map((r: any) => r.notice_id)));
+        if (reportedNoticeIds.length === 0) {
+          return { notices: [], total: 0 };
+        }
+      } catch {
+        reportedNoticeIds = [];
+      }
+    }
+
     let query = supabase
       .from('notices')
-      .select('id, title, body, category, status, created_at, updated_at, owner_id, contact_number, views_count, price, area_label', { count: 'exact' });
+      .select('id, title, body, category, status, created_at, updated_at, owner_id, contact_number, views_count, price, area_label, notice_reports(id, reason, details, status, created_at)', { count: 'exact' });
 
     if (category !== 'all') {
       query = query.eq('category', category);
     }
 
-    if (status !== 'all') {
+    if (status === 'reported') {
+      if (reportedNoticeIds && reportedNoticeIds.length > 0) {
+        query = query.in('id', reportedNoticeIds);
+      } else {
+        return { notices: [], total: 0 };
+      }
+    } else if (status !== 'all') {
       query = query.eq('status', status);
     }
 
@@ -80,16 +102,62 @@ export class AuthorService {
 
     query = query.order('created_at', { ascending: false }).range(from, to);
 
-    const { data, error, count } = await query;
-    if (error) throw new Error(error.message);
+    let { data, error, count } = await query;
+    if (error) {
+      // Graceful fallback if notice_reports relation is not yet exposed via PostgREST
+      let fallbackQuery = supabase
+        .from('notices')
+        .select('id, title, body, category, status, created_at, updated_at, owner_id, contact_number, views_count, price, area_label', { count: 'exact' });
 
-    const masked: AuthorNotice[] = (data || []).map((n) => {
+      if (category !== 'all') {
+        fallbackQuery = fallbackQuery.eq('category', category);
+      }
+      if (status === 'reported' && reportedNoticeIds && reportedNoticeIds.length > 0) {
+        fallbackQuery = fallbackQuery.in('id', reportedNoticeIds);
+      } else if (status !== 'all' && status !== 'reported') {
+        fallbackQuery = fallbackQuery.eq('status', status);
+      }
+      if (search.trim()) {
+        fallbackQuery = fallbackQuery.ilike('title', `%${search.trim()}%`);
+      }
+
+      fallbackQuery = fallbackQuery.order('created_at', { ascending: false }).range(from, to);
+      const fallbackRes = await fallbackQuery;
+      if (fallbackRes.error) throw new Error(fallbackRes.error.message);
+      data = fallbackRes.data as any;
+      count = fallbackRes.count;
+    }
+
+    // Always ensure reports are attached even if relation join returned empty
+    const noticeIds = (data || []).map((n: any) => n.id);
+    const reportsByNoticeId: Record<string, any[]> = {};
+    if (noticeIds.length > 0) {
+      try {
+        const { data: repList } = await supabase
+          .from('notice_reports')
+          .select('id, notice_id, reason, details, status, created_at')
+          .in('notice_id', noticeIds);
+        if (repList) {
+          for (const rep of repList) {
+            if (!reportsByNoticeId[rep.notice_id]) reportsByNoticeId[rep.notice_id] = [];
+            reportsByNoticeId[rep.notice_id].push(rep);
+          }
+        }
+      } catch {
+        // ignore fallback errors
+      }
+    }
+
+    const masked: AuthorNotice[] = (data || []).map((n: any) => {
       let author_phone_masked = undefined;
       if (n.contact_number) {
         author_phone_masked = n.contact_number.length > 4
           ? '••••••' + n.contact_number.slice(-4)
           : '••••';
       }
+      const rawReports = Array.isArray(n.notice_reports) && n.notice_reports.length > 0
+        ? n.notice_reports
+        : (reportsByNoticeId[n.id] || []);
       return {
         id: n.id,
         title: n.title,
@@ -104,10 +172,24 @@ export class AuthorService {
         views_count: n.views_count,
         price: n.price,
         area_label: n.area_label,
+        reports_count: rawReports.length,
+        reports: rawReports,
       };
     });
 
     return { notices: masked, total: count || 0 };
+  }
+
+  /**
+   * Dismiss/resolve reports on a notice
+   */
+  static async dismissNoticeReports(noticeId: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('notice_reports')
+      .delete()
+      .eq('notice_id', noticeId);
+    if (error) throw new Error(error.message);
+    return true;
   }
 
   /**

@@ -70,6 +70,31 @@ export default function AuthorOverview() {
         </div>
       )}
 
+      {/* Reported Notices Action Banner */}
+      {Boolean(metrics?.reported_notices && metrics.reported_notices > 0) && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <span className="p-1.5 rounded-lg bg-red-100 text-red-700">
+              <AlertOctagon className="w-4 h-4" />
+            </span>
+            <div>
+              <span className="font-bold block">
+                {metrics?.reported_notices} {metrics?.reported_notices === 1 ? 'Notice Has' : 'Notices Have'} Resident Reports Pending
+              </span>
+              <span className="text-[11px] text-red-600">
+                Community members have flagged issues that require moderation.
+              </span>
+            </div>
+          </div>
+          <a
+            href="/author/posts"
+            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg text-xs shrink-0 self-start sm:self-auto shadow-xs transition-colors"
+          >
+            Review Reported Posts &rarr;
+          </a>
+        </div>
+      )}
+
       {/* Top Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Today's Visitors */}

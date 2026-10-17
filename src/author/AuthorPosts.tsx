@@ -14,6 +14,7 @@ import {
   X,
   Edit2,
   ExternalLink,
+  Flag,
 } from 'lucide-react';
 import { AuthorService } from './authorService';
 import type { AuthorNotice, CategoryItem } from './types';
@@ -86,6 +87,23 @@ export default function AuthorPosts() {
   const handleOpenDetail = (notice: AuthorNotice) => {
     setSelectedNotice(notice);
     setRevealedPhone(null);
+  };
+
+  const handleDismissReports = async (noticeId: string) => {
+    try {
+      await AuthorService.dismissNoticeReports(noticeId);
+      showToast('success', 'Reports dismissed successfully.');
+      fetchNotices();
+      if (selectedNotice && selectedNotice.id === noticeId) {
+        setSelectedNotice({
+          ...selectedNotice,
+          reports_count: 0,
+          reports: [],
+        });
+      }
+    } catch (err: unknown) {
+      showToast('error', err instanceof Error ? err.message : 'Failed to dismiss reports');
+    }
   };
 
   const handleRevealPhone = async () => {
@@ -260,11 +278,28 @@ export default function AuthorPosts() {
               className="text-xs border border-gray-300 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="all">All Statuses</option>
+              <option value="reported">⚠️ Reported (With Issues)</option>
               <option value="published">Published</option>
               <option value="draft">Draft</option>
               <option value="removed">Removed (Soft-deleted)</option>
             </select>
           </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setStatusFilter((prev) => (prev === 'reported' ? 'all' : 'reported'));
+              setPage(1);
+            }}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg border flex items-center gap-1.5 transition-colors ${
+              statusFilter === 'reported'
+                ? 'bg-red-600 text-white border-red-600 shadow-xs'
+                : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+            }`}
+          >
+            <Flag className="w-3.5 h-3.5" />
+            <span>Reported Posts</span>
+          </button>
         </div>
       </div>
 
@@ -288,7 +323,7 @@ export default function AuthorPosts() {
           </div>
         ) : notices.length === 0 ? (
           <div className="p-12 text-center text-xs text-gray-500">
-            No notices match the filter criteria.
+            {statusFilter === 'reported' ? '🎉 No reported posts found! All notices are in clean standing.' : 'No notices match the filter criteria.'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -305,9 +340,27 @@ export default function AuthorPosts() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {notices.map((notice) => (
-                  <tr key={notice.id} className="hover:bg-gray-50/80 transition-colors">
-                    <td className="px-4 py-3 max-w-xs truncate">
-                      <span className="font-semibold text-gray-900 block truncate">{notice.title}</span>
+                  <tr
+                    key={notice.id}
+                    className={
+                      notice.reports_count && notice.reports_count > 0
+                        ? 'bg-red-50/40 hover:bg-red-50/70 transition-colors'
+                        : 'hover:bg-gray-50/80 transition-colors'
+                    }
+                  >
+                    <td className="px-4 py-3 max-w-xs">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-gray-900 truncate">{notice.title}</span>
+                        {Boolean(notice.reports_count && notice.reports_count > 0) && (
+                          <span
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 border border-red-300 shrink-0"
+                            title={`${notice.reports_count} resident complaint(s)`}
+                          >
+                            <Flag className="w-2.5 h-2.5 fill-red-600 text-red-600" />
+                            <span>{notice.reports_count} {notice.reports_count === 1 ? 'Report' : 'Reports'}</span>
+                          </span>
+                        )}
+                      </div>
                       <span className="text-[11px] text-gray-400 block truncate">{notice.content}</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
@@ -472,6 +525,58 @@ export default function AuthorPosts() {
                   </span>
                 </div>
               </div>
+
+              {/* Reported Issues Section */}
+              {selectedNotice.reports && selectedNotice.reports.length > 0 ? (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-red-900 flex items-center gap-1.5 text-xs">
+                      <Flag className="w-4 h-4 text-red-600 fill-red-600" />
+                      <span>Flagged Reports ({selectedNotice.reports.length})</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleDismissReports(selectedNotice.id)}
+                      className="px-2.5 py-1 bg-white border border-red-300 hover:bg-red-100 text-red-800 text-[11px] font-semibold rounded shadow-xs transition-colors"
+                    >
+                      Dismiss Reports
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-red-700 leading-normal">
+                    This post has received resident complaints. Inspect reasons and details below:
+                  </p>
+                  <div className="space-y-2">
+                    {selectedNotice.reports.map((report) => (
+                      <div key={report.id} className="p-3 bg-white border border-red-200 rounded-lg text-xs space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-gray-900 capitalize flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                            {report.reason.replace(/_/g, ' ')}
+                          </span>
+                          <span className="text-[10px] text-gray-400 font-mono">
+                            {new Date(report.created_at).toLocaleDateString('en-IN', {
+                              timeZone: 'Asia/Kolkata',
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
+                          </span>
+                        </div>
+                        {report.details && (
+                          <p className="text-gray-600 text-[11px] bg-gray-50 p-2 rounded border border-gray-100 italic">
+                            &ldquo;{report.details}&rdquo;
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-xl flex items-center gap-2 text-xs text-emerald-800">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>No safety reports filed for this post (clean standing).</span>
+                </div>
+              )}
 
               {/* Masked Contact & Unmask Button */}
               <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-xl space-y-2">

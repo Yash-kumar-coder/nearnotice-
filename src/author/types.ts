@@ -8,6 +8,7 @@ export interface AuthorOverviewMetrics {
   total_notices: number;
   published_notices: number;
   inactive_notices: number;
+  reported_notices?: number;
   total_categories: number;
   category_distribution: Record<string, number>;
   daily_notices_30d: Array<{ date: string; count: number }>;
@@ -57,6 +58,14 @@ export interface AuthorNotice {
   views_count?: number;
   price?: number | null;
   area_label?: string;
+  reports_count?: number;
+  reports?: Array<{
+    id: string;
+    reason: string;
+    details: string | null;
+    status: string;
+    created_at: string;
+  }>;
 }
 
 export interface AuthorUser {
