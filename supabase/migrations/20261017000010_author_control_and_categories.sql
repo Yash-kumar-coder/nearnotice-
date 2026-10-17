@@ -6,8 +6,8 @@ begin;
 
 -- 1. Admin Roles Store
 create table if not exists public.admin_roles (
-  user_id uuid primary key references auth.users(id) on delete cascade,
-  role text not null default 'super_admin' check (role in ('admin', 'super_admin')),
+  user_id uuid primary key,
+  role text not null default 'super_admin' check (role in ('admin', 'super_admin', 'author_admin')),
   notes text default 'Author console access',
   created_at timestamptz not null default pg_catalog.now()
 );
@@ -23,7 +23,7 @@ create policy "Users can check own admin role"
   to authenticated
   using (user_id = (select auth.uid()));
 
--- Provision primary author administrator (id provided by owner)
+-- Provision primary author administrator
 insert into public.admin_roles (user_id, role, notes)
 values ('a8f637e8-2dfc-4b88-971c-5af7aabbe941', 'super_admin', 'Initial owner administrator')
 on conflict (user_id) do update set role = 'super_admin';
@@ -773,5 +773,8 @@ $$;
 
 revoke execute on function public.get_author_users_directory(text, integer, integer) from public, anon;
 grant execute on function public.get_author_users_directory(text, integer, integer) to authenticated;
+
+-- Refresh PostgREST schema cache immediately
+notify pgrst, 'reload schema';
 
 commit;
