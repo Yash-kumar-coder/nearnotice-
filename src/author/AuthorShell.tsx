@@ -11,6 +11,7 @@ import {
   Menu,
   X,
   ExternalLink,
+  RefreshCw,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -84,6 +85,15 @@ export default function AuthorShell() {
 
           {/* Actions & User */}
           <div className="hidden md:flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 px-2.5 py-1 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors shadow-2xs font-medium"
+              title="Refresh Author Panel"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-gray-500" />
+              <span>Refresh</span>
+            </button>
             <a
               href="/"
               target="_blank"
@@ -148,7 +158,14 @@ export default function AuthorShell() {
               );
             })}
             <div className="pt-2 border-t border-gray-100 mt-2 flex items-center justify-between px-2">
-              <span className="text-xs text-gray-500 truncate max-w-[200px]">{authorEmail}</span>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="flex items-center gap-1.5 text-xs text-gray-700 font-medium py-1 px-2 hover:bg-gray-50 rounded"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-gray-500" />
+                <span>Refresh</span>
+              </button>
               <button
                 type="button"
                 onClick={handleSignOut}

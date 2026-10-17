@@ -11,6 +11,8 @@ vi.mock('../authorService', () => ({
     getCategories: vi.fn(),
     mutateNotice: vi.fn(),
     revealContact: vi.fn(),
+    getReportedNoticesCount: vi.fn(),
+    dismissNoticeReports: vi.fn(),
   },
 }));
 
@@ -29,6 +31,23 @@ describe('AuthorPosts Component', () => {
       views_count: 42,
       price: 4500,
       area_label: 'Indiranagar',
+      reports_count: 2,
+      reports: [
+        {
+          id: 'rep-1',
+          reason: 'Spam or advertising',
+          details: 'User posting commercial ads repeatedly',
+          status: 'pending',
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 'rep-2',
+          reason: 'Inappropriate content',
+          details: null,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+        },
+      ],
     },
   ];
 
@@ -53,6 +72,8 @@ describe('AuthorPosts Component', () => {
       total: 1,
     });
     vi.mocked(AuthorService.getCategories).mockResolvedValue(mockCategories);
+    vi.mocked(AuthorService.getReportedNoticesCount).mockResolvedValue(1);
+    vi.mocked(AuthorService.dismissNoticeReports).mockResolvedValue(true);
   });
 
   it('renders notices list with filters and statistics', async () => {
@@ -66,6 +87,8 @@ describe('AuthorPosts Component', () => {
       expect(screen.getByText('Vintage Leather Armchair')).toBeInTheDocument();
       expect(screen.getAllByText('Items for Sale').length).toBeGreaterThan(0);
       expect(screen.getAllByText('published').length).toBeGreaterThan(0);
+      expect(screen.getByText(/Reported Posts \(1\)/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/2 Reports/i).length).toBeGreaterThan(0);
     });
   });
 
@@ -107,6 +130,27 @@ describe('AuthorPosts Component', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Edit Notice' })).toBeInTheDocument();
       expect(screen.getByDisplayValue('Vintage Leather Armchair')).toBeInTheDocument();
+    });
+  });
+
+  it('opens inspect drawer with detailed report count and reasons', async () => {
+    render(
+      <MemoryRouter>
+        <AuthorPosts />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Vintage Leather Armchair')).toBeInTheDocument();
+    });
+
+    const inspectBtn = screen.getByRole('button', { name: /Inspect/i });
+    fireEvent.click(inspectBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Total Reports for this Post: 2/i)).toBeInTheDocument();
+      expect(screen.getByText(/Spam or advertising/i)).toBeInTheDocument();
+      expect(screen.getByText(/User posting commercial ads repeatedly/i)).toBeInTheDocument();
     });
   });
 });

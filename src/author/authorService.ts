@@ -193,6 +193,22 @@ export class AuthorService {
   }
 
   /**
+   * Get total count of notices that have reported issues
+   */
+  static async getReportedNoticesCount(): Promise<number> {
+    try {
+      const { data, error } = await supabase
+        .from('notice_reports')
+        .select('notice_id');
+      if (error || !data) return 0;
+      const uniqueIds = new Set(data.map((r: any) => r.notice_id));
+      return uniqueIds.size;
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
    * Mutate notice (edit, soft delete, hard delete, publish/unpublish)
    */
   static async mutateNotice(

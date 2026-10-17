@@ -7,6 +7,7 @@ import {
   Loader2,
   X,
   ExternalLink,
+  RefreshCw,
 } from 'lucide-react';
 import { AuthorService } from './authorService';
 import type { AuthorUser, AuthorNotice } from './types';
@@ -91,6 +92,15 @@ export default function AuthorUsers() {
             Registered resident accounts & aggregated notice statistics · {total} registered residents
           </p>
         </div>
+        <button
+          type="button"
+          onClick={fetchUsers}
+          disabled={loading}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-xs"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          <span>Refresh</span>
+        </button>
       </div>
 
       {/* Control Bar */}

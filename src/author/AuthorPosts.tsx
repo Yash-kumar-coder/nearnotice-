@@ -15,6 +15,7 @@ import {
   Edit2,
   ExternalLink,
   Flag,
+  RefreshCw,
 } from 'lucide-react';
 import { AuthorService } from './authorService';
 import type { AuthorNotice, CategoryItem } from './types';
@@ -23,6 +24,7 @@ export default function AuthorPosts() {
   const [notices, setNotices] = useState<AuthorNotice[]>([]);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [total, setTotal] = useState(0);
+  const [reportedTotal, setReportedTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,6 +80,19 @@ export default function AuthorPosts() {
     fetchNotices();
   }, [fetchNotices]);
 
+  const loadReportedCount = useCallback(async () => {
+    try {
+      const count = await AuthorService.getReportedNoticesCount();
+      setReportedTotal(count);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    loadReportedCount();
+  }, [loadReportedCount]);
+
   useEffect(() => {
     AuthorService.getCategories()
       .then(setCategories)
@@ -94,6 +109,7 @@ export default function AuthorPosts() {
       await AuthorService.dismissNoticeReports(noticeId);
       showToast('success', 'Reports dismissed successfully.');
       fetchNotices();
+      loadReportedCount();
       if (selectedNotice && selectedNotice.id === noticeId) {
         setSelectedNotice({
           ...selectedNotice,
@@ -228,6 +244,18 @@ export default function AuthorPosts() {
             Full control to edit, delete, or moderate notices · {total} total listings
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => {
+            fetchNotices();
+            loadReportedCount();
+          }}
+          disabled={loading}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-xs"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          <span>Refresh</span>
+        </button>
       </div>
 
       {/* Filter / Search Bar */}
@@ -298,7 +326,7 @@ export default function AuthorPosts() {
             }`}
           >
             <Flag className="w-3.5 h-3.5" />
-            <span>Reported Posts</span>
+            <span>Reported Posts ({reportedTotal})</span>
           </button>
         </div>
       </div>
@@ -333,6 +361,7 @@ export default function AuthorPosts() {
                   <th scope="col" className="px-4 py-3">Notice Title</th>
                   <th scope="col" className="px-4 py-3">Category</th>
                   <th scope="col" className="px-4 py-3">Status</th>
+                  <th scope="col" className="px-4 py-3 text-center">Reports</th>
                   <th scope="col" className="px-4 py-3 text-center">Views</th>
                   <th scope="col" className="px-4 py-3">Date (IST)</th>
                   <th scope="col" className="px-4 py-3 text-right">Actions</th>
@@ -387,6 +416,21 @@ export default function AuthorPosts() {
                         )}
                         <span className="capitalize">{notice.status}</span>
                       </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-center">
+                      {notice.reports_count && notice.reports_count > 0 ? (
+                        <span
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-300 shadow-2xs"
+                          title={`${notice.reports_count} resident complaint(s)`}
+                        >
+                          <Flag className="w-3 h-3 fill-red-600 text-red-600 shrink-0" />
+                          <span>{notice.reports_count} {notice.reports_count === 1 ? 'Report' : 'Reports'}</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-gray-400 font-mono">
+                          0
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-center font-mono text-[11px] text-gray-700">
                       {notice.views_count ?? 0}
@@ -530,10 +574,15 @@ export default function AuthorPosts() {
               {selectedNotice.reports && selectedNotice.reports.length > 0 ? (
                 <div className="p-4 bg-red-50 border border-red-200 rounded-xl space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-red-900 flex items-center gap-1.5 text-xs">
-                      <Flag className="w-4 h-4 text-red-600 fill-red-600" />
-                      <span>Flagged Reports ({selectedNotice.reports.length})</span>
-                    </span>
+                    <div>
+                      <span className="font-bold text-red-900 flex items-center gap-1.5 text-xs">
+                        <Flag className="w-4 h-4 text-red-600 fill-red-600" />
+                        <span>Total Reports for this Post: {selectedNotice.reports.length}</span>
+                      </span>
+                      <p className="text-[10px] text-red-600 font-medium mt-0.5">
+                        {selectedNotice.reports.length === 1 ? '1 community complaint pending' : `${selectedNotice.reports.length} community complaints pending`}
+                      </p>
+                    </div>
                     <button
                       type="button"
                       onClick={() => handleDismissReports(selectedNotice.id)}
@@ -542,15 +591,14 @@ export default function AuthorPosts() {
                       Dismiss Reports
                     </button>
                   </div>
-                  <p className="text-[11px] text-red-700 leading-normal">
-                    This post has received resident complaints. Inspect reasons and details below:
-                  </p>
                   <div className="space-y-2">
-                    {selectedNotice.reports.map((report) => (
+                    {selectedNotice.reports.map((report, idx) => (
                       <div key={report.id} className="p-3 bg-white border border-red-200 rounded-lg text-xs space-y-1">
                         <div className="flex items-center justify-between">
                           <span className="font-semibold text-gray-900 capitalize flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                            <span className="px-1.5 py-0.2 rounded bg-red-100 text-red-700 text-[10px] font-bold">
+                              #{idx + 1}
+                            </span>
                             {report.reason.replace(/_/g, ' ')}
                           </span>
                           <span className="text-[10px] text-gray-400 font-mono">
