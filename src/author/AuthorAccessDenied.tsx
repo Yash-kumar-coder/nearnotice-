@@ -18,6 +18,13 @@ export default function AuthorAccessDenied({ onSignOut }: AuthorAccessDeniedProp
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center px-4 py-12 font-sans">
       <div className="max-w-md w-full bg-white border border-gray-200 rounded-xl shadow-xs p-8 text-center">
+        <div className="flex justify-center mb-5">
+          <img
+            src="/logo.png"
+            alt="NearNotice"
+            className="h-12 w-auto object-contain"
+          />
+        </div>
         <div className="w-12 h-12 bg-red-50 text-red-600 rounded-xl flex items-center justify-center mx-auto mb-4">
           <ShieldAlert className="w-6 h-6" />
         </div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Shield, AlertCircle, ArrowRight, Lock } from 'lucide-react';
+import { AlertCircle, ArrowRight, Lock } from 'lucide-react';
 
 interface AuthorAuthProps {
   onSuccess: () => void;
@@ -42,16 +43,20 @@ export default function AuthorAuth({ onSuccess }: AuthorAuthProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md">
-            <Shield className="w-6 h-6" />
-          </div>
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
+        <div className="flex justify-center mb-4">
+          <Link to="/" className="inline-flex items-center justify-center group">
+            <img
+              src="/logo.png"
+              alt="NearNotice"
+              className="h-14 sm:h-16 w-auto object-contain transition-transform group-hover:scale-105"
+            />
+          </Link>
         </div>
-        <h2 className="mt-4 text-center text-2xl font-bold tracking-tight text-gray-900">
+        <h2 className="text-2xl font-bold tracking-tight text-gray-900">
           Author Console
         </h2>
-        <p className="mt-1 text-center text-xs text-gray-500">
+        <p className="mt-1 text-xs text-gray-500">
           Restricted access. NearNotice author & operations clearance only.
         </p>
       </div>
