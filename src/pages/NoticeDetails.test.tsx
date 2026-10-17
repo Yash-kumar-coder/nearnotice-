@@ -110,4 +110,64 @@ describe('NoticeDetails - View counting and RPC security', () => {
 
     expect(rpcSpy).not.toHaveBeenCalled();
   });
+
+  it('renders report button on notice page and opens report modal on click', async () => {
+    const mockNotice = {
+      id: 'notice-report-test',
+      owner_id: 'owner-1',
+      title: 'Suspicious Job Offer',
+      body: 'Earn 10000 per day by clicking links.',
+      category: 'Jobs & Gigs',
+      area_label: 'Connaught Place, Delhi',
+      contact_type: 'whatsapp',
+      views_count: 10,
+      created_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 86400000).toISOString(),
+      author_name: 'Unknown Recruiter',
+    };
+
+    vi.spyOn(supabase, 'from').mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: mockNotice, error: null }),
+      insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+    } as any);
+
+    render(
+      <MemoryRouter initialEntries={['/notice/notice-report-test']}>
+        <Routes>
+          <Route path="/notice/:id" element={<NoticeDetails />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Suspicious Job Offer')).toBeInTheDocument();
+    });
+
+    // Report buttons should be present
+    const reportButtons = screen.getAllByRole('button', { name: /report/i });
+    expect(reportButtons.length).toBeGreaterThan(0);
+
+    // Click report button
+    const { fireEvent } = await import('@testing-library/react');
+    fireEvent.click(reportButtons[0]);
+
+    // Modal dialog should appear
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByText('Report this Notice')).toBeInTheDocument();
+      expect(screen.getByText(/Suspicious or scam/i)).toBeInTheDocument();
+    });
+
+    // Submit report
+    const submitBtn = screen.getByRole('button', { name: /submit report/i });
+    fireEvent.click(submitBtn);
+
+    // Confirmation screen should appear
+    await waitFor(() => {
+      expect(screen.getByText('Report Submitted')).toBeInTheDocument();
+      expect(screen.getByText(/thank you for keeping our neighborhood safe/i)).toBeInTheDocument();
+    });
+  });
 });

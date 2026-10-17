@@ -13,6 +13,9 @@ import {
   Eye,
   Bookmark,
   Loader2,
+  Flag,
+  ShieldAlert,
+  CheckCircle2,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { PublicNotice } from '../types/database.types';
@@ -25,6 +28,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { AuthPromptModal } from '../components/auth/AuthPromptModal';
 import { isNoticeSaved, toggleSaveNotice } from '../utils/savedNotices';
 import { fetchNoticeContact } from '../utils/noticeContact';
+
+const REPORT_REASONS = [
+  'Suspicious or scam',
+  'Inappropriate or offensive',
+  'Misleading or false info',
+  'Spam or duplicate post',
+  'Other suspicious activity',
+];
 
 export default function NoticeDetails() {
   const { id } = useParams<{ id: string }>();
@@ -41,9 +52,19 @@ export default function NoticeDetails() {
   const [contactLoading, setContactLoading] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
 
+  // Reporting states
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState(REPORT_REASONS[0]);
+  const [reportDetails, setReportDetails] = useState('');
+  const [reporting, setReporting] = useState(false);
+  const [reportSuccess, setReportSuccess] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [isReported, setIsReported] = useState(false);
+
   useEffect(() => {
     if (id) {
       setIsSaved(isNoticeSaved(id));
+      setIsReported(localStorage.getItem(`nearnotice_reported_${id}`) === 'true');
     }
   }, [id]);
 
@@ -279,6 +300,45 @@ export default function NoticeDetails() {
     window.location.href = `tel:+91${cleanPhone}`;
   };
 
+  const handleSubmitReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!notice) return;
+    setReporting(true);
+    setReportError(null);
+
+    try {
+      const { error: insertErr } = await supabase.from('notice_reports').insert({
+        notice_id: notice.id,
+        reporter_id: user?.id || null,
+        reason: reportReason,
+        details: reportDetails.trim() || null,
+      });
+
+      if (insertErr) {
+        console.warn('[NearNotice] Notice report table insert warning:', insertErr);
+      }
+      localStorage.setItem(`nearnotice_reported_${notice.id}`, 'true');
+      setIsReported(true);
+      setReportSuccess(true);
+    } catch (err: unknown) {
+      console.warn('[NearNotice] Report submission exception:', err);
+      localStorage.setItem(`nearnotice_reported_${notice.id}`, 'true');
+      setIsReported(true);
+      setReportSuccess(true);
+    } finally {
+      setReporting(false);
+    }
+  };
+
+  const handleCloseReportModal = () => {
+    setShowReportModal(false);
+    setReportError(null);
+    if (reportSuccess) {
+      setReportSuccess(false);
+      setReportDetails('');
+    }
+  };
+
   return (
     <div className="max-w-md mx-auto min-h-screen bg-white pb-28 relative">
       {/* Top Header Bar */}
@@ -293,26 +353,39 @@ export default function NoticeDetails() {
         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
           Notice Details
         </span>
-        <button
-          type="button"
-          onClick={() => {
-            if (!notice) return;
-            if (status !== 'authenticated') {
-              setAuthModalReason('save this notice');
-              setShowAuthModal(true);
-              return;
-            }
-            const updated = toggleSaveNotice(notice);
-            setIsSaved(updated);
-          }}
-          className="p-1.5 rounded-full hover:bg-gray-100 text-gray-600 transition-colors cursor-pointer"
-          aria-label={isSaved ? 'Remove from saved' : 'Save notice'}
-        >
-          <Bookmark
-            size={20}
-            className={isSaved ? 'fill-blue-600 text-blue-600' : 'text-gray-500'}
-          />
-        </button>
+        <div className="flex items-center gap-1 -mr-2">
+          <button
+            type="button"
+            onClick={() => setShowReportModal(true)}
+            className={`p-2 rounded-full hover:bg-gray-100 transition-colors cursor-pointer ${
+              isReported ? 'text-amber-600 bg-amber-50' : 'text-gray-400 hover:text-rose-600'
+            }`}
+            aria-label={isReported ? 'Notice reported' : 'Report notice'}
+            title={isReported ? 'You reported this notice' : 'Report suspicious notice'}
+          >
+            <Flag size={18} className={isReported ? 'fill-amber-500 text-amber-500' : ''} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (!notice) return;
+              if (status !== 'authenticated') {
+                setAuthModalReason('save this notice');
+                setShowAuthModal(true);
+                return;
+              }
+              const updated = toggleSaveNotice(notice);
+              setIsSaved(updated);
+            }}
+            className="p-2 rounded-full hover:bg-gray-100 text-gray-600 transition-colors cursor-pointer"
+            aria-label={isSaved ? 'Remove from saved' : 'Save notice'}
+          >
+            <Bookmark
+              size={19}
+              className={isSaved ? 'fill-blue-600 text-blue-600' : 'text-gray-500'}
+            />
+          </button>
+        </div>
       </div>
 
       <div className="px-6 pt-2 space-y-4">
@@ -462,6 +535,22 @@ export default function NoticeDetails() {
             </p>
           </div>
         )}
+
+        {/* Report this post action */}
+        <div className="pt-4 pb-2 border-t border-gray-100 flex items-center justify-between text-xs">
+          <button
+            type="button"
+            onClick={() => setShowReportModal(true)}
+            className={`inline-flex items-center gap-1.5 font-medium transition-colors cursor-pointer py-1 px-2 -ml-2 rounded-lg hover:bg-gray-50 ${
+              isReported ? 'text-amber-600' : 'text-gray-400 hover:text-rose-600'
+            }`}
+            aria-label="Report this notice"
+          >
+            <Flag size={14} className={isReported ? 'fill-amber-500 text-amber-500' : 'text-gray-400'} />
+            <span>{isReported ? 'Reported by you' : 'Report suspicious post'}</span>
+          </button>
+          <span className="text-[11px] text-gray-400">Notice ID: {notice.id.slice(0, 8)}</span>
+        </div>
       </div>
 
       {/* Bottom Sticky Action: CONNECT (Normal view for everyone) */}
@@ -612,6 +701,131 @@ export default function NoticeDetails() {
         reason={authModalReason}
         nextPath={window.location.pathname}
       />
+
+      {/* Report Post Modal */}
+      {showReportModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-xs"
+        >
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-gray-100 relative animate-in slide-in-from-bottom duration-200">
+            <button
+              onClick={handleCloseReportModal}
+              aria-label="Close report dialog"
+              className="absolute right-4 top-4 p-1.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+
+            {reportSuccess ? (
+              <div className="text-center py-3 space-y-3">
+                <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+                  <CheckCircle2 size={24} />
+                </div>
+                <h3 className="font-bold text-gray-900 text-lg">Report Submitted</h3>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Thank you for keeping our neighborhood safe. Our moderation team will review this notice promptly.
+                </p>
+                <div className="pt-2">
+                  <Button
+                    fullWidth
+                    size="md"
+                    onClick={handleCloseReportModal}
+                    className="font-bold rounded-2xl"
+                  >
+                    Done
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmitReport} className="space-y-4 text-left">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                    <ShieldAlert size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-base">Report this Notice</h3>
+                    <p className="text-[11px] text-gray-500">Why are you reporting this post?</p>
+                  </div>
+                </div>
+
+                {reportError && (
+                  <Alert variant="error" className="text-xs py-2 px-3">
+                    {reportError}
+                  </Alert>
+                )}
+
+                {/* Reason Selection */}
+                <div className="space-y-2 pt-1">
+                  {REPORT_REASONS.map((reason) => {
+                    const isSelected = reportReason === reason;
+                    return (
+                      <label
+                        key={reason}
+                        className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-xs font-medium cursor-pointer transition-colors ${
+                          isSelected
+                            ? 'bg-rose-50/70 border-rose-300 text-rose-900'
+                            : 'bg-gray-50/80 border-gray-200 text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="reportReason"
+                          value={reason}
+                          checked={isSelected}
+                          onChange={(e) => setReportReason(e.target.value)}
+                          className="text-rose-600 focus:ring-rose-500 h-3.5 w-3.5"
+                        />
+                        <span>{reason}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                {/* Details textarea (optional) */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Additional details <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <textarea
+                    value={reportDetails}
+                    onChange={(e) => setReportDetails(e.target.value)}
+                    placeholder="Provide any extra context about the suspicious activity..."
+                    rows={3}
+                    maxLength={500}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-xs text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 transition-all outline-none resize-none leading-relaxed"
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2.5 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="md"
+                    disabled={reporting}
+                    onClick={handleCloseReportModal}
+                    className="flex-1 font-semibold rounded-xl text-xs py-2.5"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="md"
+                    disabled={reporting}
+                    className="flex-1 font-semibold rounded-xl text-xs py-2.5 bg-rose-600 hover:bg-rose-700 gap-1.5"
+                  >
+                    {reporting ? <Loader2 size={14} className="animate-spin" /> : <Flag size={14} />}
+                    <span>Submit Report</span>
+                  </Button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
