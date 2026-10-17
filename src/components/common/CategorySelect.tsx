@@ -1,15 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
+import { useActiveCategories, DEFAULT_CATEGORIES } from '../../hooks/useActiveCategories';
 
-export const CATEGORIES = [
-  'Items for Sale',
-  'Services',
-  'Community',
-  'Jobs & Gigs',
-  'Events',
-  'Lost & Found',
-  'Rentals',
-];
+export const CATEGORIES = DEFAULT_CATEGORIES;
 
 // Backward-compatible alias if needed
 export const CATEGORY_CONFIG = CATEGORIES.map((name) => ({ name }));
@@ -20,6 +13,7 @@ interface CategorySelectProps {
   label?: string;
   required?: boolean;
   className?: string;
+  categories?: string[];
 }
 
 export function CategorySelect({
@@ -28,11 +22,20 @@ export function CategorySelect({
   label = 'Select category',
   required = false,
   className = '',
+  categories: customCategories,
 }: CategorySelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { categories: dynamicCategories } = useActiveCategories();
 
-  const selectedCategory = value || CATEGORIES[0];
+  const availableCategories =
+    customCategories && customCategories.length > 0
+      ? customCategories
+      : dynamicCategories.length > 0
+      ? dynamicCategories
+      : CATEGORIES;
+
+  const selectedCategory = value || availableCategories[0] || 'General';
 
   // Handle clicking outside or pressing Escape
   useEffect(() => {
@@ -103,7 +106,7 @@ export function CategorySelect({
             role="listbox"
             className="absolute z-50 left-0 right-0 mt-2 bg-white rounded-2xl border border-gray-100 shadow-2xl p-2.5 space-y-2 max-h-[340px] overflow-y-auto transition-all duration-200 ease-out origin-top"
           >
-            {CATEGORIES.map((catName) => {
+            {availableCategories.map((catName) => {
               const isSelected = catName === selectedCategory;
 
               return (
@@ -145,7 +148,7 @@ export function CategorySelect({
       {/* Quick Select Chips with smooth transitions and box-shadow */}
       <div className="pt-1">
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1">
-          {CATEGORIES.map((catName) => {
+          {availableCategories.map((catName) => {
             const isSelected = catName === selectedCategory;
 
             return (
