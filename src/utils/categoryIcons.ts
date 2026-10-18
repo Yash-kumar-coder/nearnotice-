@@ -43,42 +43,39 @@ export interface CategoryIconOption {
   icon: React.ComponentType<{ size?: number; className?: string }>;
 }
 
-// 20 primary icon identifiers requested by user
+// 16 primary category icon options requested by user
 export const CATEGORY_ICON_OPTIONS: CategoryIconOption[] = [
-  { id: 'graduation-cap', key: 'education', label: 'education: "graduation-cap"', icon: GraduationCap },
-  { id: 'briefcase-business', key: 'jobs', label: 'jobs: "briefcase-business"', icon: BriefcaseBusiness },
-  { id: 'house', key: 'rentals', label: 'rentals: "house"', icon: House },
-  { id: 'shopping-bag', key: 'buySell', label: 'buySell: "shopping-bag"', icon: ShoppingBag },
-  { id: 'megaphone', key: 'community', label: 'community: "megaphone"', icon: Megaphone },
-  { id: 'calendar-days', key: 'events', label: 'events: "calendar-days"', icon: CalendarDays },
-  { id: 'search', key: 'lostFound', label: 'lostFound: "search"', icon: Search },
-  { id: 'wrench', key: 'localServices', label: 'localServices: "wrench"', icon: Wrench },
-  { id: 'heart-handshake', key: 'donations', label: 'donations: "heart-handshake"', icon: HeartHandshake },
-  { id: 'paw-print', key: 'pets', label: 'pets: "paw-print"', icon: PawPrint },
-  { id: 'car', key: 'transport', label: 'transport: "car"', icon: Car },
-  { id: 'utensils', key: 'food', label: 'food: "utensils"', icon: Utensils },
-  { id: 'heart-pulse', key: 'health', label: 'health: "heart-pulse"', icon: HeartPulse },
-  { id: 'calendar-check', key: 'bookings', label: 'bookings: "calendar-check"', icon: CalendarCheck },
-  { id: 'book-open', key: 'books', label: 'books: "book-open"', icon: BookOpen },
-  { id: 'trophy', key: 'sports', label: 'sports: "trophy"', icon: Trophy },
-  { id: 'party-popper', key: 'celebrations', label: 'celebrations: "party-popper"', icon: PartyPopper },
-  { id: 'shield-alert', key: 'safety', label: 'safety: "shield-alert"', icon: ShieldAlert },
-  { id: 'recycle', key: 'recycling', label: 'recycling: "recycle"', icon: Recycle },
-  { id: 'ellipsis', key: 'other', label: 'other: "ellipsis"', icon: Ellipsis },
+  { id: 'graduation-cap', key: 'education', label: 'education', icon: GraduationCap },
+  { id: 'briefcase-business', key: 'jobs', label: 'jobs', icon: BriefcaseBusiness },
+  { id: 'house', key: 'rentals', label: 'rentals', icon: House },
+  { id: 'shopping-bag', key: 'buySell', label: 'buySell', icon: ShoppingBag },
+  { id: 'megaphone', key: 'community', label: 'community', icon: Megaphone },
+  { id: 'calendar-days', key: 'events', label: 'events', icon: CalendarDays },
+  { id: 'search', key: 'lostFound', label: 'lostFound', icon: Search },
+  { id: 'wrench', key: 'services', label: 'services', icon: Wrench },
+  { id: 'heart-handshake', key: 'help', label: 'help', icon: HeartHandshake },
+  { id: 'paw-print', key: 'pets', label: 'pets', icon: PawPrint },
+  { id: 'car', key: 'transport', label: 'transport', icon: Car },
+  { id: 'utensils', key: 'food', label: 'food', icon: Utensils },
+  { id: 'heart-pulse', key: 'health', label: 'health', icon: HeartPulse },
+  { id: 'trophy', key: 'sports', label: 'sports', icon: Trophy },
+  { id: 'shield-alert', key: 'safety', label: 'safety', icon: ShieldAlert },
+  { id: 'ellipsis', key: 'other', label: 'other', icon: Ellipsis },
 ];
 
 // Additional backwards-compatible icons
 export const EXTRA_ICON_OPTIONS: CategoryIconOption[] = [
-  { id: 'tag', key: 'tag', label: 'general: tag', icon: Tag },
-  { id: 'layers', key: 'layers', label: 'layers: layers', icon: Layers },
-  { id: 'coffee', key: 'coffee', label: 'cafe: coffee', icon: Coffee },
-  { id: 'smartphone', key: 'smartphone', label: 'gadgets: smartphone', icon: Smartphone },
+  { id: 'calendar-check', key: 'bookings', label: 'bookings', icon: CalendarCheck },
+  { id: 'book-open', key: 'books', label: 'books', icon: BookOpen },
+  { id: 'party-popper', key: 'celebrations', label: 'celebrations', icon: PartyPopper },
+  { id: 'recycle', key: 'recycling', label: 'recycling', icon: Recycle },
+  { id: 'tag', key: 'tag', label: 'tag', icon: Tag },
+  { id: 'layers', key: 'layers', label: 'layers', icon: Layers },
+  { id: 'coffee', key: 'coffee', label: 'coffee', icon: Coffee },
+  { id: 'smartphone', key: 'smartphone', label: 'smartphone', icon: Smartphone },
 ];
 
-export const ALL_CATEGORY_ICON_OPTIONS: CategoryIconOption[] = [
-  ...CATEGORY_ICON_OPTIONS,
-  ...EXTRA_ICON_OPTIONS,
-];
+export const ALL_CATEGORY_ICON_OPTIONS: CategoryIconOption[] = CATEGORY_ICON_OPTIONS;
 
 // Normalized lookup map supporting kebab-case, camelCase keys, PascalCase, and lowercase
 const ICON_LOOKUP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {

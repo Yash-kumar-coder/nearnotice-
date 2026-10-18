@@ -370,7 +370,15 @@ export default function AuthorCategories() {
                       {React.createElement(getCategoryIcon(icon, name), { size: 16 })}
                     </div>
                     <select
-                      value={icon}
+                      value={
+                        availableIcons.find(
+                          (o) =>
+                            o.id === icon ||
+                            o.key === icon ||
+                            o.id.toLowerCase() === icon?.toLowerCase() ||
+                            o.key.toLowerCase() === icon?.toLowerCase()
+                        )?.id || icon
+                      }
                       onChange={(e) => setIcon(e.target.value)}
                       className="w-full border border-gray-300 rounded-lg p-2 text-xs bg-white focus:ring-1 focus:ring-blue-500 font-mono"
                     >
@@ -379,6 +387,14 @@ export default function AuthorCategories() {
                           {opt.label}
                         </option>
                       ))}
+                      {!availableIcons.some(
+                        (o) =>
+                          o.id === icon ||
+                          o.key === icon ||
+                          o.id.toLowerCase() === icon?.toLowerCase() ||
+                          o.key.toLowerCase() === icon?.toLowerCase()
+                      ) &&
+                        icon && <option value={icon}>{icon}</option>}
                     </select>
                   </div>
                 </div>
@@ -404,7 +420,7 @@ export default function AuthorCategories() {
                 <div className="flex items-center justify-between text-[11px] text-gray-600 font-medium">
                   <span>Visual Icon Palette (Click to select):</span>
                   <span className="font-mono text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                    {icon}
+                    {availableIcons.find((o) => o.id === icon || o.key === icon)?.label || icon}
                   </span>
                 </div>
                 <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5 max-h-44 overflow-y-auto p-2 bg-gray-50 rounded-lg border border-gray-200">
