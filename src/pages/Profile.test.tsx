@@ -208,4 +208,17 @@ describe('Profile Component - Edit Name Feature', () => {
     expect(screen.getByText('Installed on this device')).toBeInTheDocument();
     expect(screen.getByText('Installed')).toBeInTheDocument();
   });
+
+  it('renders "Help & Support" button linking to /support', () => {
+    render(
+      <MemoryRouter>
+        <Profile />
+      </MemoryRouter>
+    );
+
+    const helpLink = screen.getByRole('link', { name: /help & support/i });
+    expect(helpLink).toBeInTheDocument();
+    expect(helpLink).toHaveAttribute('href', '/support');
+    expect(screen.getByText(/faqs, contact form, report issues & safety/i)).toBeInTheDocument();
+  });
 });

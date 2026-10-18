@@ -37,6 +37,7 @@ const NoticeDetails = lazy(() => import('./pages/NoticeDetails'));
 // Legal and fallback routes
 const Terms = lazy(() => import('./pages/Terms'));
 const Privacy = lazy(() => import('./pages/Privacy'));
+const HelpSupport = lazy(() => import('./pages/HelpSupport'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Lazy-loaded Author Console
@@ -46,6 +47,7 @@ const AuthorOverview = lazy(() => import('./author/AuthorOverview'));
 const AuthorPosts = lazy(() => import('./author/AuthorPosts'));
 const AuthorCategories = lazy(() => import('./author/AuthorCategories'));
 const AuthorUsers = lazy(() => import('./author/AuthorUsers'));
+const AuthorSupport = lazy(() => import('./author/AuthorSupport'));
 const AuthorAnalytics = lazy(() => import('./author/AuthorAnalytics'));
 
 export default function App() {
@@ -188,6 +190,10 @@ export default function App() {
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
 
+              {/* Help & Support */}
+              <Route path="/support" element={<HelpSupport />} />
+              <Route path="/help" element={<Navigate to="/support" replace />} />
+
               {/* Author Operations Console */}
               <Route
                 path="/author"
@@ -202,6 +208,7 @@ export default function App() {
                 <Route path="posts" element={<AuthorPosts />} />
                 <Route path="categories" element={<AuthorCategories />} />
                 <Route path="users" element={<AuthorUsers />} />
+                <Route path="support" element={<AuthorSupport />} />
                 <Route path="analytics" element={<AuthorAnalytics />} />
               </Route>
 

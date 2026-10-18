@@ -12,6 +12,7 @@ import {
   X,
   ExternalLink,
   RefreshCw,
+  LifeBuoy,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -37,6 +38,7 @@ export default function AuthorShell() {
     { label: 'Posts', to: '/author/posts', icon: FileText },
     { label: 'Categories', to: '/author/categories', icon: Tags },
     { label: 'Users', to: '/author/users', icon: Users },
+    { label: 'Support', to: '/author/support', icon: LifeBuoy },
     { label: 'Analytics', to: '/author/analytics', icon: BarChart3 },
   ];
 

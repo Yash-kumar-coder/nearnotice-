@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   Sparkles,
   Smartphone,
+  HelpCircle,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { usePWAInstall } from '../hooks/usePWAInstall';
@@ -294,6 +295,23 @@ export default function Profile() {
             </span>
           </div>
         )}
+
+        {/* Help and Support */}
+        <Link
+          to="/support"
+          className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-800"
+        >
+          <div className="flex items-center gap-3">
+            <HelpCircle size={18} className="text-blue-600" />
+            <div className="flex flex-col text-left">
+              <span className="font-medium text-gray-900">Help & Support</span>
+              <span className="text-[11px] text-gray-500 font-normal">
+                FAQs, Contact Form, Report Issues & Safety
+              </span>
+            </div>
+          </div>
+          <span className="text-xs text-gray-400">&rarr;</span>
+        </Link>
       </div>
 
       {/* Sign Out Button */}
