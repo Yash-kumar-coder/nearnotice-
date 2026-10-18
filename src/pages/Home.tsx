@@ -20,6 +20,16 @@ import {
   LogIn,
   Check,
   Loader2,
+  Tag,
+  Layers,
+  ShoppingBag,
+  BookOpen,
+  Heart,
+  Coffee,
+  AlertTriangle,
+  Car,
+  Smartphone,
+  Sparkles,
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { PublicNotice } from '../types/database.types';
@@ -34,18 +44,68 @@ import { AuthPromptModal } from '../components/auth/AuthPromptModal';
 import { getNoticeDistanceKm } from '../utils/distance';
 import { getSavedNoticeIds, toggleSaveNotice } from '../utils/savedNotices';
 import { geocode, getCachedAreaCoordinates } from '../utils/geocode';
+import { useActiveCategories, DEFAULT_CATEGORY_ITEMS } from '../hooks/useActiveCategories';
 
-// Categories matching the reference mockup iconography
-const CATEGORY_TABS = [
-  { id: 'All', label: 'All', icon: LayoutGrid },
-  { id: 'Study', label: 'Study', icon: GraduationCap },
-  { id: 'Jobs', label: 'Jobs', icon: Briefcase },
-  { id: 'Rentals', label: 'Rentals', icon: HomeIcon },
-  { id: 'Events', label: 'Events', icon: Calendar },
-  { id: 'Services', label: 'Services', icon: Wrench },
-  { id: 'Items', label: 'Items', icon: Package },
-  { id: 'Community', label: 'Community', icon: Users },
-];
+// Category icon mapper with icon identifier and keyword heuristic fallback
+const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+  All: LayoutGrid,
+  LayoutGrid,
+  Study: GraduationCap,
+  GraduationCap,
+  Jobs: Briefcase,
+  Briefcase,
+  Rentals: HomeIcon,
+  Home: HomeIcon,
+  Calendar,
+  Events: Calendar,
+  Wrench,
+  Services: Wrench,
+  Package,
+  Items: Package,
+  ShoppingBag,
+  Users,
+  Community: Users,
+  Search,
+  Layers,
+  AlertTriangle,
+  BookOpen,
+  Heart,
+  Coffee,
+  Tag,
+  Car,
+  Smartphone,
+  Sparkles,
+  Compass,
+};
+
+export function getCategoryIcon(
+  iconName?: string,
+  categoryName?: string
+): React.ComponentType<{ size?: number; className?: string }> {
+  if (iconName && ICON_MAP[iconName]) {
+    return ICON_MAP[iconName];
+  }
+  if (categoryName) {
+    if (ICON_MAP[categoryName]) {
+      return ICON_MAP[categoryName];
+    }
+    const lower = categoryName.toLowerCase();
+    if (lower.includes('study') || lower.includes('edu') || lower.includes('book') || lower.includes('course')) return GraduationCap;
+    if (lower.includes('job') || lower.includes('gig') || lower.includes('work') || lower.includes('career')) return Briefcase;
+    if (lower.includes('rent') || lower.includes('home') || lower.includes('house') || lower.includes('flat') || lower.includes('room') || lower.includes('pg')) return HomeIcon;
+    if (lower.includes('event') || lower.includes('fest') || lower.includes('party')) return Calendar;
+    if (lower.includes('service') || lower.includes('repair') || lower.includes('plumb') || lower.includes('fix')) return Wrench;
+    if (lower.includes('item') || lower.includes('sale') || lower.includes('buy') || lower.includes('shop') || lower.includes('product')) return ShoppingBag;
+    if (lower.includes('community') || lower.includes('social') || lower.includes('group') || lower.includes('meet')) return Users;
+    if (lower.includes('car') || lower.includes('vehicle') || lower.includes('auto') || lower.includes('bike') || lower.includes('motor')) return Car;
+    if (lower.includes('lost') || lower.includes('found') || lower.includes('search')) return Search;
+    if (lower.includes('phone') || lower.includes('gadget') || lower.includes('electro') || lower.includes('mobile')) return Smartphone;
+    if (lower.includes('coffee') || lower.includes('food') || lower.includes('cafe') || lower.includes('dine')) return Coffee;
+    if (lower.includes('heart') || lower.includes('health') || lower.includes('medical') || lower.includes('care')) return Heart;
+    if (lower.includes('alert') || lower.includes('emergency') || lower.includes('warn') || lower.includes('urgent')) return AlertTriangle;
+  }
+  return Tag;
+}
 
 const PAGE_SIZE = 12;
 
@@ -72,6 +132,31 @@ export default function Home() {
 
   const [notices, setNotices] = useState<PublicNotice[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const { categoryObjects } = useActiveCategories();
+
+  const categoryTabs = useMemo(() => {
+    const list: Array<{
+      id: string;
+      label: string;
+      icon: React.ComponentType<{ size?: number; className?: string }>;
+    }> = [{ id: 'All', label: 'All', icon: LayoutGrid }];
+
+    const source =
+      categoryObjects && categoryObjects.length > 0
+        ? categoryObjects
+        : DEFAULT_CATEGORY_ITEMS;
+
+    source.forEach((cat) => {
+      list.push({
+        id: cat.name,
+        label: cat.name,
+        icon: getCategoryIcon(cat.icon, cat.name),
+      });
+    });
+
+    return list;
+  }, [categoryObjects]);
+
   const [activeTab, setActiveTab] = useState<'all' | 'nearby'>('all');
   const [locationError, setLocationError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -266,7 +351,18 @@ export default function Home() {
 
         // Category filter
         if (selectedCategory !== 'All') {
-          query = query.ilike('category', `%${selectedCategory}%`);
+          const primaryWord = selectedCategory.split(/[\s&]+/)[0]?.trim();
+          if (
+            primaryWord &&
+            primaryWord.length > 2 &&
+            primaryWord.toLowerCase() !== selectedCategory.toLowerCase()
+          ) {
+            query = query.or(
+              `category.ilike.%${selectedCategory}%,category.ilike.%${primaryWord}%`
+            );
+          } else {
+            query = query.ilike('category', `%${selectedCategory}%`);
+          }
         }
 
         // Sanitized search filter
@@ -617,7 +713,7 @@ export default function Home() {
 
         {/* Category Icon Tiles (Matching Mockup with Rounded Boxes) */}
         <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2 pt-1 -mx-5 px-5">
-          {CATEGORY_TABS.map((cat) => {
+          {categoryTabs.map((cat) => {
             const Icon = cat.icon;
             const isSelected = selectedCategory === cat.id;
             return (
@@ -625,7 +721,7 @@ export default function Home() {
                 key={cat.id}
                 type="button"
                 onClick={() => setSelectedCategory(cat.id)}
-                className="flex flex-col items-center min-w-[56px] group cursor-pointer focus:outline-none"
+                className="flex flex-col items-center min-w-[56px] group cursor-pointer focus:outline-none shrink-0"
               >
                 <div
                   className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
@@ -637,7 +733,7 @@ export default function Home() {
                   <Icon size={20} />
                 </div>
                 <span
-                  className={`text-[11px] mt-1.5 font-bold transition-colors ${
+                  className={`text-[11px] mt-1.5 font-bold transition-colors whitespace-nowrap px-1 ${
                     isSelected ? 'text-blue-600' : 'text-gray-500'
                   }`}
                 >
