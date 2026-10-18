@@ -16,6 +16,8 @@ import {
   Flag,
   ShieldAlert,
   CheckCircle2,
+  Share2,
+  Check,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { PublicNotice } from '../types/database.types';
@@ -29,6 +31,7 @@ import { AuthPromptModal } from '../components/auth/AuthPromptModal';
 import { isNoticeSaved, toggleSaveNotice } from '../utils/savedNotices';
 import { fetchNoticeContact } from '../utils/noticeContact';
 import { geocode, getCachedAreaCoordinates } from '../utils/geocode';
+import { shareNotice } from '../utils/shareNotice';
 
 const REPORT_REASONS = [
   'Suspicious or scam',
@@ -52,6 +55,7 @@ export default function NoticeDetails() {
   const [isSaved, setIsSaved] = useState(false);
   const [contactLoading, setContactLoading] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
 
   // Reporting states
   const [showReportModal, setShowReportModal] = useState(false);
@@ -355,6 +359,21 @@ export default function NoticeDetails() {
     }
   };
 
+  const handleShareAction = async () => {
+    if (!notice) return;
+    const result = await shareNotice({
+      id: notice.id,
+      title: notice.title,
+      body: notice.body,
+      areaLabel: notice.area_label,
+      price: notice.price,
+    });
+    if (result.copied) {
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    }
+  };
+
   return (
     <div className="max-w-md mx-auto min-h-screen bg-white pb-28 relative">
       {/* Top Header Bar */}
@@ -370,6 +389,26 @@ export default function NoticeDetails() {
           Notice Details
         </span>
         <div className="flex items-center gap-1 -mr-2">
+          {/* Share Button */}
+          <button
+            type="button"
+            onClick={handleShareAction}
+            className="p-2 rounded-full hover:bg-gray-100 text-gray-600 hover:text-blue-600 transition-colors cursor-pointer relative group/details-share"
+            aria-label={shareCopied ? 'Link copied' : 'Share notice'}
+            title={shareCopied ? 'Link copied!' : 'Share with friends'}
+          >
+            {shareCopied ? (
+              <Check size={19} className="text-emerald-600 stroke-[2.5]" />
+            ) : (
+              <Share2 size={19} className="text-gray-500 group-hover/details-share:text-blue-600" />
+            )}
+            {shareCopied && (
+              <span className="absolute -bottom-7 right-0 bg-gray-900 text-white text-[10px] font-medium px-2 py-0.5 rounded shadow-sm whitespace-nowrap z-30 animate-in fade-in duration-150">
+                Copied!
+              </span>
+            )}
+          </button>
+
           <button
             type="button"
             onClick={() => setShowReportModal(true)}
