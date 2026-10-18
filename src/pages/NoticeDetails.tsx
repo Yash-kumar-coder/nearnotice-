@@ -28,6 +28,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { AuthPromptModal } from '../components/auth/AuthPromptModal';
 import { isNoticeSaved, toggleSaveNotice } from '../utils/savedNotices';
 import { fetchNoticeContact } from '../utils/noticeContact';
+import { geocode, getCachedAreaCoordinates } from '../utils/geocode';
 
 const REPORT_REASONS = [
   'Suspicious or scam',
@@ -174,6 +175,21 @@ export default function NoticeDetails() {
             }
           } catch {
             // Silently fallback if profiles query is restricted
+          }
+        }
+
+        // Populate coordinates from persistent cache or geocoding if missing
+        if ((fetchedNotice.latitude == null || fetchedNotice.longitude == null) && fetchedNotice.area_label) {
+          const cachedCoords = getCachedAreaCoordinates(fetchedNotice.area_label);
+          if (cachedCoords) {
+            fetchedNotice.latitude = cachedCoords.latitude;
+            fetchedNotice.longitude = cachedCoords.longitude;
+          } else {
+            geocode(fetchedNotice.area_label).then((geo) => {
+              if (geo) {
+                setNotice((prev) => (prev ? { ...prev, latitude: geo.latitude, longitude: geo.longitude } : prev));
+              }
+            });
           }
         }
 

@@ -33,6 +33,7 @@ import { isOnboardingCompleted } from '../features/onboarding/onboardingStorage'
 import { AuthPromptModal } from '../components/auth/AuthPromptModal';
 import { getNoticeDistanceKm } from '../utils/distance';
 import { getSavedNoticeIds, toggleSaveNotice } from '../utils/savedNotices';
+import { geocode, getCachedAreaCoordinates } from '../utils/geocode';
 
 // Categories matching the reference mockup iconography
 const CATEGORY_TABS = [
@@ -316,6 +317,15 @@ export default function Home() {
               (r.owner_id ? localStorage.getItem(`nearnotice_owner_name_${r.owner_id}`) : null);
             r.author_name = cached || 'Neighbor';
           }
+
+          // Populate coordinates from persistent cache if missing on row
+          if ((r.latitude == null || r.longitude == null) && r.area_label) {
+            const cachedCoords = getCachedAreaCoordinates(r.area_label);
+            if (cachedCoords) {
+              r.latitude = cachedCoords.latitude;
+              r.longitude = cachedCoords.longitude;
+            }
+          }
         });
 
         // Ensure current user's notices always show their real display name immediately
@@ -405,6 +415,41 @@ export default function Home() {
       if (currentTarget) observer.unobserve(currentTarget);
     };
   }, [hasMore, loading, loadingMore, fetchNotices]);
+
+  // Gentle background geocoding for legacy posts that may not have coordinates in database
+  useEffect(() => {
+    const unlocated = notices.filter(
+      (n) => (n.latitude == null || n.longitude == null) && n.area_label?.trim()
+    );
+    if (unlocated.length === 0) return;
+
+    let isMounted = true;
+    const resolveMissingCoordinates = async () => {
+      const uniqueAreas = Array.from(new Set(unlocated.map((n) => n.area_label.trim())));
+      for (const area of uniqueAreas) {
+        if (!isMounted) break;
+        try {
+          const res = await geocode(area);
+          if (res && isMounted) {
+            setNotices((prev) =>
+              prev.map((item) =>
+                item.area_label?.trim().toLowerCase() === area.toLowerCase() && item.latitude == null
+                  ? { ...item, latitude: res.latitude, longitude: res.longitude }
+                  : item
+              )
+            );
+          }
+        } catch {
+          // Graceful fallback
+        }
+      }
+    };
+
+    resolveMissingCoordinates();
+    return () => {
+      isMounted = false;
+    };
+  }, [notices]);
 
   // Guest action handler with stable callback
   const handleGuestAction = useCallback((actionLabel: string, returnPath: string) => {

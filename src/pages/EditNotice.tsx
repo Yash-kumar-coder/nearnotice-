@@ -7,6 +7,8 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import type { Notice } from '../types/database.types';
 import { CategorySelect } from '../components/common/CategorySelect';
+import { LocationInput } from '../components/common/LocationInput';
+import { geocode } from '../utils/geocode';
 import {
   optimizeImage,
   validateImageFile,
@@ -56,7 +58,6 @@ export default function EditNotice() {
   const [phone, setPhone] = useState('');
   const [price, setPrice] = useState('');
 
-  const [locating, setLocating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -198,48 +199,6 @@ export default function EditNotice() {
     });
   };
 
-  // Browser Geolocation for "Use current"
-  const handleUseCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser.');
-      return;
-    }
-
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        setLatitude(lat);
-        setLongitude(lng);
-
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
-          );
-          const data = await res.json();
-          const city =
-            data.address?.suburb ||
-            data.address?.neighbourhood ||
-            data.address?.city ||
-            data.address?.town ||
-            'Local Neighborhood';
-          const state = data.address?.state || '';
-          setAreaLabel(state ? `${city}, ${state}` : city);
-        } catch {
-          setAreaLabel('Current Location');
-        } finally {
-          setLocating(false);
-        }
-      },
-      () => {
-        alert('Could not retrieve current location.');
-        setLocating(false);
-      },
-      { timeout: 10000, enableHighAccuracy: false }
-    );
-  };
-
   // 2. Update notice (U in CRUD)
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -306,13 +265,32 @@ export default function EditNotice() {
 
       const allImages = [...existingImages, ...newlyUploadedUrls];
 
+      // Ensure coordinates are resolved before saving notice
+      let finalLat = latitude;
+      let finalLng = longitude;
+
+      if ((finalLat == null || finalLng == null) && areaLabel.trim()) {
+        setUploadStatus('Resolving location coordinates...');
+        try {
+          const geo = await geocode(areaLabel.trim());
+          if (geo) {
+            finalLat = geo.latitude;
+            finalLng = geo.longitude;
+            setLatitude(geo.latitude);
+            setLongitude(geo.longitude);
+          }
+        } catch {
+          // Graceful fallback
+        }
+      }
+
       const updatePayload: Record<string, unknown> = {
         title: title.trim(),
         body: description.trim() || null,
         category,
         area_label: areaLabel.trim(),
-        latitude,
-        longitude,
+        latitude: finalLat,
+        longitude: finalLng,
         image_path: allImages[0] || null,
         images: allImages,
         contact_number: phone.trim(),
@@ -527,31 +505,19 @@ export default function EditNotice() {
           ) : null}
         </div>
 
-        {/* Location with "Use current" */}
-        <div>
-          <div className="flex justify-between items-center mb-1.5">
-            <label className="text-sm font-semibold text-gray-800">
-              Location <span className="text-red-500">*</span>
-            </label>
-            <button
-              type="button"
-              onClick={handleUseCurrentLocation}
-              disabled={locating}
-              className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1 cursor-pointer"
-            >
-              <MapPin size={12} />
-              {locating ? 'Locating...' : 'Use current'}
-            </button>
-          </div>
-          <input
-            type="text"
-            value={areaLabel}
-            onChange={(e) => setAreaLabel(e.target.value)}
-            placeholder="e.g. Motihari, Bihar"
-            required
-            className="w-full bg-gray-100/80 border border-transparent rounded-2xl py-3.5 px-4 text-sm text-gray-900 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 transition-all outline-none"
-          />
-        </div>
+        {/* Location with Autocomplete, Geocoding & Use Current */}
+        <LocationInput
+          value={areaLabel}
+          onChange={setAreaLabel}
+          latitude={latitude}
+          longitude={longitude}
+          onCoordinatesChange={(lat, lng) => {
+            setLatitude(lat);
+            setLongitude(lng);
+          }}
+          placeholder="e.g. Motihari, Bihar or Connaught Place, Delhi"
+          required
+        />
 
         {/* Contact Selector (Whatsapp & Call) */}
         <div>

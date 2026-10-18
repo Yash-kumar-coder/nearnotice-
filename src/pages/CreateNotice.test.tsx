@@ -3,6 +3,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import CreateNotice from './CreateNotice';
+import { supabase } from '../lib/supabase';
+import * as geocodeUtil from '../utils/geocode';
 
 let mockAuth = {
   user: {
@@ -104,6 +106,49 @@ describe('CreateNotice Component Tests', () => {
       // Since images are optional, it validates the next required field: neighborhood/location
       expect(screen.getByText(/please provide a neighborhood or location area/i)).toBeInTheDocument();
       expect(screen.queryByText(/please add at least 1 image for your notice/i)).not.toBeInTheDocument();
+    });
+  });
+
+  it('automatically resolves coordinates when user types custom location without GPS', async () => {
+    const geocodeSpy = vi.spyOn(geocodeUtil, 'geocode').mockResolvedValueOnce({
+      latitude: 26.65,
+      longitude: 84.91,
+      displayName: 'Motihari, Bihar',
+      shortName: 'Motihari, Bihar',
+    });
+
+    const insertSpy = vi.fn().mockResolvedValueOnce({ error: null });
+    vi.spyOn(supabase, 'from').mockReturnValue({
+      insert: insertSpy,
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: [] }),
+    } as any);
+
+    const { container } = render(
+      <MemoryRouter>
+        <CreateNotice />
+      </MemoryRouter>
+    );
+
+    fireEvent.change(screen.getByPlaceholderText(/e.g. Buy my i-phone/i), {
+      target: { value: 'iPhone 14 Pro Max' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/Describe condition, specifications/i), {
+      target: { value: 'Like new condition with box and bill' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/e.g. Motihari, Bihar/i), {
+      target: { value: 'Motihari, Bihar' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('9876543210'), {
+      target: { value: '9876543210' },
+    });
+
+    const form = container.querySelector('form')!;
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(geocodeSpy).toHaveBeenCalledWith('Motihari, Bihar');
     });
   });
 });
