@@ -7,29 +7,11 @@ import {
   MapPin,
   ChevronDown,
   LayoutGrid,
-  GraduationCap,
-  Briefcase,
-  Home as HomeIcon,
-  Calendar,
-  Wrench,
-  Package,
-  Users,
-  Compass,
   Zap,
   X,
   LogIn,
   Check,
   Loader2,
-  Tag,
-  Layers,
-  ShoppingBag,
-  BookOpen,
-  Heart,
-  Coffee,
-  AlertTriangle,
-  Car,
-  Smartphone,
-  Sparkles,
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { PublicNotice } from '../types/database.types';
@@ -45,67 +27,9 @@ import { getNoticeDistanceKm } from '../utils/distance';
 import { getSavedNoticeIds, toggleSaveNotice } from '../utils/savedNotices';
 import { geocode, getCachedAreaCoordinates } from '../utils/geocode';
 import { useActiveCategories, DEFAULT_CATEGORY_ITEMS } from '../hooks/useActiveCategories';
+import { getCategoryIcon } from '../utils/categoryIcons';
 
-// Category icon mapper with icon identifier and keyword heuristic fallback
-const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
-  All: LayoutGrid,
-  LayoutGrid,
-  Study: GraduationCap,
-  GraduationCap,
-  Jobs: Briefcase,
-  Briefcase,
-  Rentals: HomeIcon,
-  Home: HomeIcon,
-  Calendar,
-  Events: Calendar,
-  Wrench,
-  Services: Wrench,
-  Package,
-  Items: Package,
-  ShoppingBag,
-  Users,
-  Community: Users,
-  Search,
-  Layers,
-  AlertTriangle,
-  BookOpen,
-  Heart,
-  Coffee,
-  Tag,
-  Car,
-  Smartphone,
-  Sparkles,
-  Compass,
-};
-
-export function getCategoryIcon(
-  iconName?: string,
-  categoryName?: string
-): React.ComponentType<{ size?: number; className?: string }> {
-  if (iconName && ICON_MAP[iconName]) {
-    return ICON_MAP[iconName];
-  }
-  if (categoryName) {
-    if (ICON_MAP[categoryName]) {
-      return ICON_MAP[categoryName];
-    }
-    const lower = categoryName.toLowerCase();
-    if (lower.includes('study') || lower.includes('edu') || lower.includes('book') || lower.includes('course')) return GraduationCap;
-    if (lower.includes('job') || lower.includes('gig') || lower.includes('work') || lower.includes('career')) return Briefcase;
-    if (lower.includes('rent') || lower.includes('home') || lower.includes('house') || lower.includes('flat') || lower.includes('room') || lower.includes('pg')) return HomeIcon;
-    if (lower.includes('event') || lower.includes('fest') || lower.includes('party')) return Calendar;
-    if (lower.includes('service') || lower.includes('repair') || lower.includes('plumb') || lower.includes('fix')) return Wrench;
-    if (lower.includes('item') || lower.includes('sale') || lower.includes('buy') || lower.includes('shop') || lower.includes('product')) return ShoppingBag;
-    if (lower.includes('community') || lower.includes('social') || lower.includes('group') || lower.includes('meet')) return Users;
-    if (lower.includes('car') || lower.includes('vehicle') || lower.includes('auto') || lower.includes('bike') || lower.includes('motor')) return Car;
-    if (lower.includes('lost') || lower.includes('found') || lower.includes('search')) return Search;
-    if (lower.includes('phone') || lower.includes('gadget') || lower.includes('electro') || lower.includes('mobile')) return Smartphone;
-    if (lower.includes('coffee') || lower.includes('food') || lower.includes('cafe') || lower.includes('dine')) return Coffee;
-    if (lower.includes('heart') || lower.includes('health') || lower.includes('medical') || lower.includes('care')) return Heart;
-    if (lower.includes('alert') || lower.includes('emergency') || lower.includes('warn') || lower.includes('urgent')) return AlertTriangle;
-  }
-  return Tag;
-}
+export { getCategoryIcon };
 
 const PAGE_SIZE = 12;
 

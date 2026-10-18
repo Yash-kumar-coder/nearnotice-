@@ -13,13 +13,13 @@ export const DEFAULT_CATEGORIES = [
 ];
 
 export const DEFAULT_CATEGORY_ITEMS: CategoryItem[] = [
-  { id: 'cat-study', name: 'Study', slug: 'study', icon: 'GraduationCap', color: 'blue', is_active: true, sort_order: 1 },
-  { id: 'cat-jobs', name: 'Jobs', slug: 'jobs', icon: 'Briefcase', color: 'indigo', is_active: true, sort_order: 2 },
-  { id: 'cat-rentals', name: 'Rentals', slug: 'rentals', icon: 'Home', color: 'cyan', is_active: true, sort_order: 3 },
-  { id: 'cat-events', name: 'Events', slug: 'events', icon: 'Calendar', color: 'purple', is_active: true, sort_order: 4 },
-  { id: 'cat-services', name: 'Services', slug: 'services', icon: 'Wrench', color: 'emerald', is_active: true, sort_order: 5 },
-  { id: 'cat-items', name: 'Items', slug: 'items', icon: 'Package', color: 'amber', is_active: true, sort_order: 6 },
-  { id: 'cat-community', name: 'Community', slug: 'community', icon: 'Users', color: 'blue', is_active: true, sort_order: 7 },
+  { id: 'cat-study', name: 'Study', slug: 'study', icon: 'graduation-cap', color: 'blue', is_active: true, sort_order: 1 },
+  { id: 'cat-jobs', name: 'Jobs', slug: 'jobs', icon: 'briefcase-business', color: 'indigo', is_active: true, sort_order: 2 },
+  { id: 'cat-rentals', name: 'Rentals', slug: 'rentals', icon: 'house', color: 'cyan', is_active: true, sort_order: 3 },
+  { id: 'cat-events', name: 'Events', slug: 'events', icon: 'calendar-days', color: 'purple', is_active: true, sort_order: 4 },
+  { id: 'cat-services', name: 'Services', slug: 'services', icon: 'wrench', color: 'emerald', is_active: true, sort_order: 5 },
+  { id: 'cat-items', name: 'Items', slug: 'items', icon: 'shopping-bag', color: 'amber', is_active: true, sort_order: 6 },
+  { id: 'cat-community', name: 'Community', slug: 'community', icon: 'megaphone', color: 'blue', is_active: true, sort_order: 7 },
 ];
 
 // In-memory cache to avoid redundant queries across component re-renders

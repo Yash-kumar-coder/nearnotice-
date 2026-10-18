@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Tags,
   Plus,
@@ -14,6 +14,7 @@ import {
 import { AuthorService } from './authorService';
 import type { CategoryItem } from './types';
 import { invalidateCategoryCache } from '../hooks/useActiveCategories';
+import { ALL_CATEGORY_ICON_OPTIONS, getCategoryIcon } from '../utils/categoryIcons';
 
 export default function AuthorCategories() {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
@@ -25,7 +26,7 @@ export default function AuthorCategories() {
   const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null);
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
-  const [icon, setIcon] = useState('Tag');
+  const [icon, setIcon] = useState('graduation-cap');
   const [color, setColor] = useState('blue');
   const [sortOrder, setSortOrder] = useState(0);
   const [isActive, setIsActive] = useState(true);
@@ -60,7 +61,7 @@ export default function AuthorCategories() {
     setEditingCategory(null);
     setName('');
     setSlug('');
-    setIcon('Tag');
+    setIcon('graduation-cap');
     setColor('blue');
     setSortOrder(categories.length + 1);
     setIsActive(true);
@@ -161,7 +162,7 @@ export default function AuthorCategories() {
     }
   };
 
-  const availableIcons = ['Tag', 'Layers', 'Wrench', 'Calendar', 'ShoppingBag', 'Search', 'AlertTriangle', 'Home', 'Briefcase', 'BookOpen', 'Heart', 'Coffee'];
+  const availableIcons = ALL_CATEGORY_ICON_OPTIONS;
   const availableColors = ['blue', 'emerald', 'purple', 'amber', 'indigo', 'red', 'cyan', 'rose'];
 
   return (
@@ -261,8 +262,8 @@ export default function AuthorCategories() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-2.5">
-                        <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
-                          <Tags className="w-3.5 h-3.5" />
+                        <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
+                          {React.createElement(getCategoryIcon(cat.icon, cat.name), { size: 14 })}
                         </div>
                         <span className="font-bold text-gray-900 text-xs">{cat.name}</span>
                       </div>
@@ -364,17 +365,22 @@ export default function AuthorCategories() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-medium text-gray-700 mb-1">Icon Identifier</label>
-                  <select
-                    value={icon}
-                    onChange={(e) => setIcon(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg p-2 text-xs bg-white focus:ring-1 focus:ring-blue-500"
-                  >
-                    {availableIcons.map((ic) => (
-                      <option key={ic} value={ic}>
-                        {ic}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 shrink-0 flex items-center justify-center w-8 h-8">
+                      {React.createElement(getCategoryIcon(icon, name), { size: 16 })}
+                    </div>
+                    <select
+                      value={icon}
+                      onChange={(e) => setIcon(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg p-2 text-xs bg-white focus:ring-1 focus:ring-blue-500 font-mono"
+                    >
+                      {availableIcons.map((opt) => (
+                        <option key={opt.id} value={opt.id}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 <div>
