@@ -29,8 +29,6 @@ import { geocode, getCachedAreaCoordinates } from '../utils/geocode';
 import { useActiveCategories, DEFAULT_CATEGORY_ITEMS } from '../hooks/useActiveCategories';
 import { getCategoryIcon } from '../utils/categoryIcons';
 
-export { getCategoryIcon };
-
 const PAGE_SIZE = 12;
 
 // Explicit column list without sensitive phone numbers (includes author_name, contact_type, etc.)

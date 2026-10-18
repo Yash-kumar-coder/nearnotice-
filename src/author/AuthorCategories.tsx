@@ -323,7 +323,7 @@ export default function AuthorCategories() {
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4"
         >
-          <div className="bg-white border border-gray-200 rounded-xl shadow-2xl max-w-md w-full p-6 text-xs text-gray-700 space-y-4 font-sans animate-in zoom-in-95 duration-150">
+          <div className="bg-white border border-gray-200 rounded-xl shadow-2xl max-w-lg w-full max-h-[92vh] overflow-y-auto p-6 text-xs text-gray-700 space-y-4 font-sans animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="font-bold text-sm text-gray-900">
                 {editingCategory ? 'Edit Category' : 'Create New Category'}
@@ -396,6 +396,44 @@ export default function AuthorCategories() {
                       </option>
                     ))}
                   </select>
+                </div>
+              </div>
+
+              {/* Interactive Visual Icon Palette */}
+              <div className="space-y-1.5 pt-1">
+                <div className="flex items-center justify-between text-[11px] text-gray-600 font-medium">
+                  <span>Visual Icon Palette (Click to select):</span>
+                  <span className="font-mono text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                    {icon}
+                  </span>
+                </div>
+                <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5 max-h-44 overflow-y-auto p-2 bg-gray-50 rounded-lg border border-gray-200">
+                  {availableIcons.map((opt) => {
+                    const isSelected =
+                      icon === opt.id ||
+                      icon === opt.key ||
+                      icon?.toLowerCase() === opt.id.toLowerCase() ||
+                      icon?.toLowerCase() === opt.key.toLowerCase();
+                    const IconComp = opt.icon;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setIcon(opt.id)}
+                        title={opt.label}
+                        className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all text-center cursor-pointer ${
+                          isSelected
+                            ? 'bg-blue-50 border-blue-600 text-blue-600 font-bold shadow-xs ring-1 ring-blue-500'
+                            : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-100 hover:text-gray-900'
+                        }`}
+                      >
+                        <IconComp size={18} />
+                        <span className="text-[10px] truncate max-w-full mt-1 font-mono">
+                          {opt.key}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
