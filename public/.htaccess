@@ -1,4 +1,5 @@
 <IfModule mod_mime.c>
+  AddType text/javascript .js .mjs
   AddType application/javascript .js .mjs
   AddType text/css .css
   AddType image/svg+xml .svg
@@ -7,6 +8,14 @@
 </IfModule>
 
 <IfModule mod_headers.c>
+  # Force correct MIME type for JavaScript and CSS modules
+  <FilesMatch "\.(js|mjs)$">
+    Header set Content-Type "text/javascript; charset=utf-8"
+  </FilesMatch>
+  <FilesMatch "\.css$">
+    Header set Content-Type "text/css; charset=utf-8"
+  </FilesMatch>
+
   <Files "index.html">
     Header set Cache-Control "no-cache, no-store, must-revalidate"
     Header set Pragma "no-cache"
