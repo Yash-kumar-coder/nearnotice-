@@ -23,9 +23,9 @@ import { Alert } from '../components/common/Alert';
 import { useAuth } from '../contexts/AuthContext';
 import { isOnboardingCompleted } from '../features/onboarding/onboardingStorage';
 import { AuthPromptModal } from '../components/auth/AuthPromptModal';
-import { getNoticeDistanceKm } from '../utils/distance';
+import { getNoticeDistanceKm, calculateDistance } from '../utils/distance';
 import { getSavedNoticeIds, toggleSaveNotice } from '../utils/savedNotices';
-import { geocode, getCachedAreaCoordinates } from '../utils/geocode';
+import { geocode, getCachedAreaCoordinates, reverseGeocode } from '../utils/geocode';
 import { useActiveCategories, DEFAULT_CATEGORY_ITEMS } from '../hooks/useActiveCategories';
 import { getCategoryIcon } from '../utils/categoryIcons';
 
@@ -177,29 +177,23 @@ export default function Home() {
       async (pos) => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
-        setUserCoords({ lat, lng });
+        // Avoid recreating state object reference if location hasn't moved significantly (< 500m)
+        setUserCoords((prev) => {
+          if (prev) {
+            const dist = calculateDistance(prev.lat, prev.lng, lat, lng);
+            if (dist !== null && dist < 0.5) {
+              return prev;
+            }
+          }
+          return { lat, lng };
+        });
         localStorage.setItem('nearnotice_lat', lat.toString());
         localStorage.setItem('nearnotice_lng', lng.toString());
+
         try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
-          );
-          const data = await res.json();
-          const address = data?.address || {};
-          const locality =
-            address.suburb ||
-            address.neighbourhood ||
-            address.city ||
-            address.town ||
-            address.village ||
-            address.municipality ||
-            address.district ||
-            address.county ||
-            '';
-          const state = address.state || address.state_district || '';
-          const detected =
-            locality && state ? `${locality}, ${state}` : (locality || state || 'Current Location');
-          setCurrentCity(detected);
+          const revResult = await reverseGeocode(lat, lng);
+          const detected = revResult?.city || 'Current Location';
+          setCurrentCity((prev) => (prev === detected ? prev : detected));
           localStorage.setItem('nearnotice_city', detected);
           setLocationEnabled(true);
           localStorage.setItem('nearnotice_loc_enabled', 'true');
@@ -407,7 +401,7 @@ export default function Home() {
         }
       }
     },
-    [selectedCategory, debouncedSearch, currentCity, user]
+    [selectedCategory, debouncedSearch, user]
   );
 
   // Refetch on filter / search changes

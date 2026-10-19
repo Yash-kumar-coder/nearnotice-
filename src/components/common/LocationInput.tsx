@@ -4,6 +4,7 @@ import {
   fetchLocationSuggestions,
   geocode,
   LocationSuggestion,
+  reverseGeocode,
 } from '../../utils/geocode';
 
 interface LocationInputProps {
@@ -165,29 +166,8 @@ export const LocationInput: React.FC<LocationInputProps> = ({
         onCoordinatesChange(lat, lng);
 
         try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
-            {
-              headers: {
-                'Accept-Language': 'en',
-                'User-Agent': 'NearNotice/1.0',
-              },
-            }
-          );
-          const data = await res.json();
-          const address = data?.address || {};
-          const primary =
-            address.suburb ||
-            address.neighbourhood ||
-            address.road ||
-            address.city ||
-            address.town ||
-            address.village ||
-            address.county ||
-            'Local Area';
-          const secondary = address.city || address.state || '';
-          const label = secondary && secondary !== primary ? `${primary}, ${secondary}` : primary;
-          onChange(label);
+          const rev = await reverseGeocode(lat, lng);
+          onChange(rev?.city || 'Current Location');
         } catch {
           onChange('Current Location');
         } finally {
