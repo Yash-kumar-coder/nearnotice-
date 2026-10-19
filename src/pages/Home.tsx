@@ -7,14 +7,6 @@ import {
   MapPin,
   ChevronDown,
   LayoutGrid,
-  GraduationCap,
-  Briefcase,
-  Home as HomeIcon,
-  Calendar,
-  Wrench,
-  Package,
-  Users,
-  Compass,
   Zap,
   X,
   LogIn,
@@ -33,18 +25,9 @@ import { isOnboardingCompleted } from '../features/onboarding/onboardingStorage'
 import { AuthPromptModal } from '../components/auth/AuthPromptModal';
 import { getNoticeDistanceKm } from '../utils/distance';
 import { getSavedNoticeIds, toggleSaveNotice } from '../utils/savedNotices';
-
-// Categories matching the reference mockup iconography
-const CATEGORY_TABS = [
-  { id: 'All', label: 'All', icon: LayoutGrid },
-  { id: 'Study', label: 'Study', icon: GraduationCap },
-  { id: 'Jobs', label: 'Jobs', icon: Briefcase },
-  { id: 'Rentals', label: 'Rentals', icon: HomeIcon },
-  { id: 'Events', label: 'Events', icon: Calendar },
-  { id: 'Services', label: 'Services', icon: Wrench },
-  { id: 'Items', label: 'Items', icon: Package },
-  { id: 'Community', label: 'Community', icon: Users },
-];
+import { geocode, getCachedAreaCoordinates } from '../utils/geocode';
+import { useActiveCategories, DEFAULT_CATEGORY_ITEMS } from '../hooks/useActiveCategories';
+import { getCategoryIcon } from '../utils/categoryIcons';
 
 const PAGE_SIZE = 12;
 
@@ -71,6 +54,31 @@ export default function Home() {
 
   const [notices, setNotices] = useState<PublicNotice[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const { categoryObjects } = useActiveCategories();
+
+  const categoryTabs = useMemo(() => {
+    const list: Array<{
+      id: string;
+      label: string;
+      icon: React.ComponentType<{ size?: number; className?: string }>;
+    }> = [{ id: 'All', label: 'All', icon: LayoutGrid }];
+
+    const source =
+      categoryObjects && categoryObjects.length > 0
+        ? categoryObjects
+        : DEFAULT_CATEGORY_ITEMS;
+
+    source.forEach((cat) => {
+      list.push({
+        id: cat.name,
+        label: cat.name,
+        icon: getCategoryIcon(cat.icon, cat.name),
+      });
+    });
+
+    return list;
+  }, [categoryObjects]);
+
   const [activeTab, setActiveTab] = useState<'all' | 'nearby'>('all');
   const [locationError, setLocationError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -265,7 +273,18 @@ export default function Home() {
 
         // Category filter
         if (selectedCategory !== 'All') {
-          query = query.ilike('category', `%${selectedCategory}%`);
+          const primaryWord = selectedCategory.split(/[\s&]+/)[0]?.trim();
+          if (
+            primaryWord &&
+            primaryWord.length > 2 &&
+            primaryWord.toLowerCase() !== selectedCategory.toLowerCase()
+          ) {
+            query = query.or(
+              `category.ilike.%${selectedCategory}%,category.ilike.%${primaryWord}%`
+            );
+          } else {
+            query = query.ilike('category', `%${selectedCategory}%`);
+          }
         }
 
         // Sanitized search filter
@@ -315,6 +334,15 @@ export default function Home() {
               localStorage.getItem(`nearnotice_post_author_${r.id}`) ||
               (r.owner_id ? localStorage.getItem(`nearnotice_owner_name_${r.owner_id}`) : null);
             r.author_name = cached || 'Neighbor';
+          }
+
+          // Populate coordinates from persistent cache if missing on row
+          if ((r.latitude == null || r.longitude == null) && r.area_label) {
+            const cachedCoords = getCachedAreaCoordinates(r.area_label);
+            if (cachedCoords) {
+              r.latitude = cachedCoords.latitude;
+              r.longitude = cachedCoords.longitude;
+            }
           }
         });
 
@@ -405,6 +433,41 @@ export default function Home() {
       if (currentTarget) observer.unobserve(currentTarget);
     };
   }, [hasMore, loading, loadingMore, fetchNotices]);
+
+  // Gentle background geocoding for legacy posts that may not have coordinates in database
+  useEffect(() => {
+    const unlocated = notices.filter(
+      (n) => (n.latitude == null || n.longitude == null) && n.area_label?.trim()
+    );
+    if (unlocated.length === 0) return;
+
+    let isMounted = true;
+    const resolveMissingCoordinates = async () => {
+      const uniqueAreas = Array.from(new Set(unlocated.map((n) => n.area_label.trim())));
+      for (const area of uniqueAreas) {
+        if (!isMounted) break;
+        try {
+          const res = await geocode(area);
+          if (res && isMounted) {
+            setNotices((prev) =>
+              prev.map((item) =>
+                item.area_label?.trim().toLowerCase() === area.toLowerCase() && item.latitude == null
+                  ? { ...item, latitude: res.latitude, longitude: res.longitude }
+                  : item
+              )
+            );
+          }
+        } catch {
+          // Graceful fallback
+        }
+      }
+    };
+
+    resolveMissingCoordinates();
+    return () => {
+      isMounted = false;
+    };
+  }, [notices]);
 
   // Guest action handler with stable callback
   const handleGuestAction = useCallback((actionLabel: string, returnPath: string) => {
@@ -572,7 +635,7 @@ export default function Home() {
 
         {/* Category Icon Tiles (Matching Mockup with Rounded Boxes) */}
         <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2 pt-1 -mx-5 px-5">
-          {CATEGORY_TABS.map((cat) => {
+          {categoryTabs.map((cat) => {
             const Icon = cat.icon;
             const isSelected = selectedCategory === cat.id;
             return (
@@ -580,7 +643,7 @@ export default function Home() {
                 key={cat.id}
                 type="button"
                 onClick={() => setSelectedCategory(cat.id)}
-                className="flex flex-col items-center min-w-[56px] group cursor-pointer focus:outline-none"
+                className="flex flex-col items-center min-w-[56px] group cursor-pointer focus:outline-none shrink-0"
               >
                 <div
                   className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
@@ -592,7 +655,7 @@ export default function Home() {
                   <Icon size={20} />
                 </div>
                 <span
-                  className={`text-[11px] mt-1.5 font-bold transition-colors ${
+                  className={`text-[11px] mt-1.5 font-bold transition-colors whitespace-nowrap px-1 ${
                     isSelected ? 'text-blue-600' : 'text-gray-500'
                   }`}
                 >

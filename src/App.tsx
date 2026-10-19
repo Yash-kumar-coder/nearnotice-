@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { RequireAuth } from './components/guards/RequireAuth';
 import { PublicOnlyRoute } from './components/guards/PublicOnlyRoute';
@@ -8,6 +8,12 @@ import { PageSkeleton } from './components/common/Skeleton';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { NamePromptModal } from './components/auth/NamePromptModal';
 import { InstallBanner } from './components/pwa/InstallBanner';
+import { useTrafficTracker } from './hooks/useTrafficTracker';
+
+function TrafficTracker() {
+  useTrafficTracker();
+  return null;
+}
 
 // Lazy-loaded route components for maximum performance & code splitting
 const Home = lazy(() => import('./pages/Home'));
@@ -31,13 +37,25 @@ const NoticeDetails = lazy(() => import('./pages/NoticeDetails'));
 // Legal and fallback routes
 const Terms = lazy(() => import('./pages/Terms'));
 const Privacy = lazy(() => import('./pages/Privacy'));
+const HelpSupport = lazy(() => import('./pages/HelpSupport'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+
+// Lazy-loaded Author Console
+const AuthorGuard = lazy(() => import('./author/AuthorGuard'));
+const AuthorShell = lazy(() => import('./author/AuthorShell'));
+const AuthorOverview = lazy(() => import('./author/AuthorOverview'));
+const AuthorPosts = lazy(() => import('./author/AuthorPosts'));
+const AuthorCategories = lazy(() => import('./author/AuthorCategories'));
+const AuthorUsers = lazy(() => import('./author/AuthorUsers'));
+const AuthorSupport = lazy(() => import('./author/AuthorSupport'));
+const AuthorAnalytics = lazy(() => import('./author/AuthorAnalytics'));
 
 export default function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
         <Router>
+          <TrafficTracker />
           <NamePromptModal />
           <InstallBanner />
           <Suspense fallback={<PageSkeleton />}>
@@ -171,6 +189,28 @@ export default function App() {
               {/* Legal Documents */}
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
+
+              {/* Help & Support */}
+              <Route path="/support" element={<HelpSupport />} />
+              <Route path="/help" element={<Navigate to="/support" replace />} />
+
+              {/* Author Operations Console */}
+              <Route
+                path="/author"
+                element={
+                  <AuthorGuard>
+                    <AuthorShell />
+                  </AuthorGuard>
+                }
+              >
+                <Route index element={<Navigate to="/author/overview" replace />} />
+                <Route path="overview" element={<AuthorOverview />} />
+                <Route path="posts" element={<AuthorPosts />} />
+                <Route path="categories" element={<AuthorCategories />} />
+                <Route path="users" element={<AuthorUsers />} />
+                <Route path="support" element={<AuthorSupport />} />
+                <Route path="analytics" element={<AuthorAnalytics />} />
+              </Route>
 
               {/* 404 Catch-All */}
               <Route path="*" element={<NotFound />} />

@@ -191,4 +191,36 @@ describe('NoticeCard - Button sizing and authentication state', () => {
 
     windowOpenSpy.mockRestore();
   });
+
+  it('renders share button and calls shareNotice on click', async () => {
+    const shareSpy = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'share', {
+      value: shareSpy,
+      configurable: true,
+      writable: true,
+    });
+
+    render(
+      <MemoryRouter>
+        <NoticeCard
+          notice={mockNoticeWhatsApp}
+          onSaveToggle={() => {}}
+        />
+      </MemoryRouter>
+    );
+
+    const shareBtn = screen.getByRole('button', { name: /share notice/i });
+    expect(shareBtn).toBeInTheDocument();
+    fireEvent.click(shareBtn);
+
+    await waitFor(() => {
+      expect(shareSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Maths Tutor Available',
+          url: expect.stringContaining('/notice/test-notice-1'),
+        })
+      );
+    });
+  });
 });
+

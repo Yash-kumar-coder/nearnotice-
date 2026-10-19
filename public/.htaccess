@@ -1,13 +1,21 @@
 <IfModule mod_mime.c>
+  AddType text/javascript .js .mjs
   AddType application/javascript .js .mjs
   AddType text/css .css
   AddType image/svg+xml .svg
   AddType application/json .json
   AddType font/woff2 .woff2
-  AddType application/vnd.android.package-archive .apk
 </IfModule>
 
 <IfModule mod_headers.c>
+  # Force correct MIME type for JavaScript and CSS modules
+  <FilesMatch "\.(js|mjs)$">
+    Header set Content-Type "text/javascript; charset=utf-8"
+  </FilesMatch>
+  <FilesMatch "\.css$">
+    Header set Content-Type "text/css; charset=utf-8"
+  </FilesMatch>
+
   <Files "index.html">
     Header set Cache-Control "no-cache, no-store, must-revalidate"
     Header set Pragma "no-cache"
@@ -18,30 +26,26 @@
     Header set Pragma "no-cache"
     Header set Expires "0"
   </FilesMatch>
-  <FilesMatch "\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|apk)$">
+  <FilesMatch "\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$">
     Header set Cache-Control "max-age=31536000, immutable"
   </FilesMatch>
 </IfModule>
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
+  Options +FollowSymLinks
   RewriteBase /
 
-  # Enforce HTTPS (required for Web Crypto, Mobile Auth, and PWA Service Worker)
+  # Enforce HTTPS
   RewriteCond %{HTTPS} off
   RewriteCond %{HTTP:X-Forwarded-Proto} !https
   RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-  # Do not rewrite missing static assets to index.html (return real 404 instead of serving HTML)
-  RewriteCond %{REQUEST_URI} \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|json|apk)$ [NC]
-  RewriteCond %{REQUEST_FILENAME} !-f
-  RewriteRule ^ - [R=404,L]
+  # Serve existing static files and directories directly without rewrite
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
 
-  # SPA Routing
-  RewriteRule ^index\.html$ - [L]
-  RewriteCond %{REQUEST_FILENAME} !-f
-  RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteRule . /index.html [L]
+  # Single Page Application fallback: route all virtual URLs to index.html
+  RewriteRule ^ index.html [L]
 </IfModule>
-
-

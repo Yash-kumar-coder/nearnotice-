@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { MapPin, Clock, Bookmark, Phone, Loader2 } from 'lucide-react';
+import { MapPin, Clock, Bookmark, Phone, Loader2, Share2, Check } from 'lucide-react';
 import type { PublicNotice } from '../types/database.types';
 import { formatRelativeTime } from '../utils/formatTime';
 import { getEstimatedNoticeDistance } from '../utils/distance';
@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { AuthPromptModal } from './auth/AuthPromptModal';
 import { fetchNoticeContact } from '../utils/noticeContact';
 import { getOptimizedThumbnailUrl } from '../utils/imageUrl';
+import { shareNotice } from '../utils/shareNotice';
 
 export interface NoticeCardProps {
   notice: PublicNotice;
@@ -170,6 +171,25 @@ function NoticeCardComponent({
   const [showLocalAuth, setShowLocalAuth] = useState(false);
   const [localAuthReason, setLocalAuthReason] = useState('connect with this neighbor');
   const [isConnecting, setIsConnecting] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleShareClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const result = await shareNotice({
+      id: notice.id,
+      title: notice.title,
+      body: notice.body,
+      areaLabel: notice.area_label,
+      price: notice.price,
+    });
+
+    if (result.copied) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   const handleOpenNotice = (e: React.MouseEvent) => {
     if (status !== 'authenticated') {
@@ -262,13 +282,34 @@ function NoticeCardComponent({
                 <span>{badge.label}</span>
               </span>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0">
                 {notice.price != null && Number(notice.price) > 0 && (
-                  <span className="font-extrabold text-blue-600 text-base sm:text-lg tracking-tight">
+                  <span className="font-extrabold text-blue-600 text-base sm:text-lg tracking-tight mr-1">
                     ₹{Number(notice.price).toLocaleString('en-IN')}
                   </span>
                 )}
 
+                {/* Share Button */}
+                <button
+                  type="button"
+                  onClick={handleShareClick}
+                  aria-label={copied ? 'Link copied' : 'Share notice'}
+                  title={copied ? 'Link copied!' : 'Share with friends'}
+                  className="p-1 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer rounded-lg hover:bg-blue-50 relative group/share"
+                >
+                  {copied ? (
+                    <Check size={18} className="text-emerald-600 stroke-[2.5]" />
+                  ) : (
+                    <Share2 size={18} className="text-gray-400 group-hover/share:text-blue-600 stroke-[1.75]" />
+                  )}
+                  {copied && (
+                    <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] font-medium px-2 py-0.5 rounded shadow-sm whitespace-nowrap z-30 animate-in fade-in zoom-in-95 duration-150">
+                      Copied!
+                    </span>
+                  )}
+                </button>
+
+                {/* Bookmark Button */}
                 <button
                   type="button"
                   onClick={(e) => {

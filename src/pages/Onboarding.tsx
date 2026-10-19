@@ -7,10 +7,10 @@ import {
   setOnboardingCompleted,
 } from '../features/onboarding/onboardingStorage';
 
-// Real onboarding illustrations from the repo
-import slide1Img from '../../Onboarding Illustrations/1st screen.png';
-import slide2Img from '../../Onboarding Illustrations/2nd screen.png';
-import slide3Img from '../../Onboarding Illustrations/3rd screen.png';
+// Real onboarding illustrations from the repo (WebP format)
+import slide1Img from '../../Onboarding Illustrations/1st screen.webp';
+import slide2Img from '../../Onboarding Illustrations/2nd screen.webp';
+import slide3Img from '../../Onboarding Illustrations/3rd screen.webp';
 
 interface Slide {
   id: number;
